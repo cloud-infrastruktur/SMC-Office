@@ -1,0 +1,49 @@
+// API Route: Paperless Document Download
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
+import { isAdminOrManager } from '@/lib/auth';
+import { getPaperlessClient } from '@/lib/paperless';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !isAdminOrManager((session.user as { role?: string }).role)) {
+      return new NextResponse('Nicht autorisiert', { status: 403 });
+    }
+
+    const client = await getPaperlessClient();
+    if (!client) {
+      return new NextResponse('Paperless nicht konfiguriert', { status: 400 });
+    }
+
+    const documentId = parseInt(params.id);
+    if (isNaN(documentId)) {
+      return new NextResponse('Ungültige Dokument-ID', { status: 400 });
+    }
+
+    // Get document details for filename
+    const document = await client.getDocument(documentId);
+    
+    // Download the file
+    const fileData = await client.downloadDocument(documentId);
+    
+    // Determine filename
+    const filename = document.original_file_name || `document-${documentId}.pdf`;
+
+    return new NextResponse(fileData, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (error) {
+    console.error('Error downloading document:', error);
+    return new NextResponse('Fehler beim Herunterladen des Dokuments', { status: 500 });
+  }
+}

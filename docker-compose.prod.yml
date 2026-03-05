@@ -1,0 +1,50 @@
+# SMC-Office Production Overrides
+# ================================
+# Verwendet mit: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.9'
+
+services:
+  minio:
+    # Keine Console-Ports in Production
+    ports:
+      - "9000:9000"
+    environment:
+      # Starke Credentials verwenden!
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    # TLS aktivieren (Zertifikate mounten)
+    # volumes:
+    #   - ./certs:/root/.minio/certs:ro
+
+  app:
+    environment:
+      - NODE_ENV=production
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+    # Ressourcen-Limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Nginx Reverse Proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: smc-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - smc-network
+    profiles:
+      - with-nginx

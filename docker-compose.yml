@@ -1,0 +1,167 @@
+# SMC-Office Cloud-Native Stack v4.1
+# ===================================
+# Stateless Architecture mit PostgreSQL, MinIO Object Storage
+# Node.js 20 LTS | Yarn Berry PnP | Auto-Init bei leerem DB
+#
+# Verwendung:
+#   Entwicklung: docker-compose up -d
+#   Produktion:  docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.9'
+
+services:
+  # ================================
+  # PostgreSQL Database
+  # ================================
+  db:
+    image: postgres:15-alpine
+    container_name: smc-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      # WICHTIG: Diese Werte müssen mit bestehenden Volumes konsistent sein!
+      POSTGRES_USER: ${POSTGRES_USER:-smc_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smc_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-smc_website}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smc_user} -d ${POSTGRES_DB:-smc_website}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - smc-network
+
+  # ================================
+  # MinIO Object Storage
+  # ================================
+  minio:
+    image: minio/minio:latest
+    container_name: smc-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"     # S3 API
+      - "9001:9001"     # MinIO Console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 10s
+    networks:
+      - smc-network
+
+  # ================================
+  # MinIO Bucket Initialisierung
+  # ================================
+  minio-init:
+    image: minio/mc:latest
+    container_name: smc-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: |
+      /bin/sh -c '
+      sleep 5
+      mc alias set smc http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}
+      mc mb smc/$${S3_BUCKET_NAME} --ignore-existing
+      mc anonymous set download smc/$${S3_BUCKET_NAME}/public
+      echo "MinIO Bucket initialisiert: $${S3_BUCKET_NAME}"
+      '
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-smc-storage}
+    networks:
+      - smc-network
+
+  # ================================
+  # SMC Website (Next.js) - VEREINHEITLICHT: smc-website
+  # ================================
+  smc-website:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smc-website
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # PnP-Loader (Yarn Berry Plug'n'Play)
+      - NODE_OPTIONS=--require /app/.pnp.cjs
+      # Database - MUSS mit db-Service übereinstimmen!
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-smc_user}:${POSTGRES_PASSWORD:-smc_secure_password}@db:5432/${POSTGRES_DB:-smc_website}
+      # NextAuth - KRITISCH: NEXTAUTH_SECRET muss gesetzt sein!
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?NEXTAUTH_SECRET ist erforderlich! Bitte in .env setzen.}
+      # S3/MinIO Konfiguration
+      - S3_ENDPOINT=http://minio:9000
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-smc-storage}
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - S3_REGION=us-east-1
+    depends_on:
+      db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s  # Zeit für Auto-Init (Migration + Seed)
+    networks:
+      - smc-network
+    volumes:
+      - uploads:/app/uploads
+
+  # ================================
+  # PostgreSQL Backup Service
+  # ================================
+  backup:
+    image: postgres:15-alpine
+    container_name: smc-backup
+    restart: "no"
+    environment:
+      - PGHOST=db
+      - PGUSER=${POSTGRES_USER:-smc_user}
+      - PGPASSWORD=${POSTGRES_PASSWORD:-smc_secure_password}
+      - PGDATABASE=${POSTGRES_DB:-smc_website}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-smc-storage}
+    volumes:
+      - ./scripts/backup.sh:/backup.sh:ro
+    entrypoint: ["/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - smc-network
+    profiles:
+      - backup
+
+volumes:
+  pg_data:
+    driver: local
+  minio_data:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  smc-network:
+    driver: bridge

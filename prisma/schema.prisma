@@ -1,0 +1,1220 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String           @id @default(cuid())
+  name          String?
+  email         String?          @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  role          UserRole         @default(USER)
+  organization  String?
+  notes         String?
+  isActive      Boolean          @default(true)
+  lastLogin     DateTime?
+  accounts      Account[]
+  crmActivities CrmActivity[]
+  assignedDeals CrmDeal[]
+  emailAccounts EmailAccount[]
+  sessions      Session[]
+  permissions   UserPermission[]
+  
+  // V4.3: Notes & Calendar
+  userNotes        Note[]
+  calendarAccounts CalendarAccount[]
+  calendarEvents   CalendarEvent[]
+  
+  // V4.4: Projekt-Management
+  managedProjects  CrmProject[]       @relation("ProjectManager")
+  projectMembers   CrmProjectMember[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Client {
+  id             String       @id @default(cuid())
+  name           String       @unique
+  anonymizedName String
+  industry       String
+  description    String?
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  crmContacts    CrmContact[]
+  projects       Project[]
+  references     Reference[]
+
+  @@index([industry])
+}
+
+model IndustryCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model DownloadFile {
+  id               String       @id @default(cuid())
+  title            String
+  description      String?
+  category         FileCategory
+  fileName         String
+  fileSize         Int?
+  cloudStoragePath String
+  isPublic         Boolean      @default(false)
+  uploadedAt       DateTime     @default(now())
+  uploadedBy       String?
+}
+
+model ConsultantProfile {
+  id               String   @id @default(cuid())
+  fileName         String
+  cloudStoragePath String
+  uploadedAt       DateTime @default(now())
+  uploadedBy       String?
+  isActive         Boolean  @default(true)
+}
+
+model Project {
+  id             String      @id @default(cuid())
+  projectNumber  String      @unique
+  title          String
+  client         String
+  period         String
+  role           String
+  objective      String
+  keyTasks       String[]
+  highlights     String[]
+  technologies   String[]
+  sortOrder      Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  categoryId     String?
+  pdfFileName    String?
+  pdfStoragePath String?
+  clientId       String?
+  clientRef      Client?     @relation(fields: [clientId], references: [id])
+  references     Reference[]
+
+  @@index([clientId])
+}
+
+model Reference {
+  id             String   @id @default(cuid())
+  client         String
+  period         String
+  role           String
+  focus          String
+  industry       String
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  projectId      String?
+  categoryId     String?
+  pdfFileName    String?
+  pdfStoragePath String?
+  clientId       String?
+  clientRef      Client?  @relation(fields: [clientId], references: [id])
+  project        Project? @relation(fields: [projectId], references: [id])
+
+  @@index([clientId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model Training {
+  id             String   @id @default(cuid())
+  title          String
+  provider       String?
+  year           String?
+  category       String
+  description    String?
+  link           String?
+  sortOrder      Int      @default(0)
+  isHighlight    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  categoryId     String?
+  pdfFileName    String?
+  pdfStoragePath String?
+}
+
+model Competency {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  icon        String
+  category    String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProfileData {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  category  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SmtpConfig {
+  id           String   @id @default(cuid())
+  host         String
+  port         Int
+  secure       Boolean  @default(true)
+  username     String
+  password     String
+  fromEmail    String
+  fromName     String
+  contactEmail String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PageContent {
+  id        String   @id @default(cuid())
+  page      String
+  section   String
+  content   String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([page, section])
+}
+
+model UserPermission {
+  id        String         @id @default(cuid())
+  userId    String
+  area      PermissionArea
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, area])
+  @@index([userId])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  type        String
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  icon        String?
+
+  @@index([type])
+}
+
+model ManagedFile {
+  id               String           @id @default(cuid())
+  fileName         String
+  displayName      String?
+  description      String?
+  mimeType         String
+  fileSize         Int
+  cloudStoragePath String
+  folderId         String?
+  isPublic         Boolean          @default(false)
+  thumbnailPath    String?
+  uploadedAt       DateTime         @default(now())
+  uploadedBy       String?
+  attachments      FileAttachment[]
+  folder           FileFolder?      @relation(fields: [folderId], references: [id])
+
+  @@index([folderId])
+  @@index([mimeType])
+}
+
+model FileFolder {
+  id        String        @id @default(cuid())
+  name      String
+  slug      String        @unique
+  parentId  String?
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  parent    FileFolder?   @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children  FileFolder[]  @relation("FolderHierarchy")
+  files     ManagedFile[]
+
+  @@index([parentId])
+}
+
+model FileAttachment {
+  id         String      @id @default(cuid())
+  fileId     String
+  entityType String
+  entityId   String
+  sortOrder  Int         @default(0)
+  createdAt  DateTime    @default(now())
+  file       ManagedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+model SocService {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  icon        String
+  status      String      @default("active")
+  statusText  String?
+  url         String?
+  webhookId   String?
+  categoryId  String?
+  sortOrder   Int         @default(0)
+  isVisible   Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  events      SocEvent[]
+  metrics     SocMetric[]
+
+  @@index([status])
+}
+
+model SocEvent {
+  id        String      @id @default(cuid())
+  serviceId String?
+  type      String
+  title     String
+  message   String
+  source    String?
+  metadata  Json?
+  isRead    Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  service   SocService? @relation(fields: [serviceId], references: [id])
+
+  @@index([serviceId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model SocMetric {
+  id        String      @id @default(cuid())
+  serviceId String?
+  name      String
+  value     String
+  unit      String?
+  timestamp DateTime    @default(now())
+  service   SocService? @relation(fields: [serviceId], references: [id])
+
+  @@index([serviceId])
+  @@index([name])
+}
+
+model N8nWorkflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  workflowId  String
+  webhookUrl  String?
+  icon        String?
+  color       String?
+  serviceId   String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SmsAlertConfig {
+  id              String   @id @default(cuid())
+  provider        String   @default("sms77")
+  apiKey          String?
+  accountSid      String?
+  authToken       String?
+  fromNumber      String?
+  alertRecipients String[]
+  isActive        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PaperlessConfig {
+  id        String   @id @default(cuid())
+  baseUrl   String
+  apiToken  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PaperlessDocumentCache {
+  id                String    @id @default(cuid())
+  documentId        Int       @unique
+  title             String
+  correspondent     String?
+  documentType      String?
+  tags              String[]
+  createdDate       DateTime?
+  addedDate         DateTime?
+  thumbnailPath     String?
+  lastSynced        DateTime  @default(now())
+  sevdeskId         String?
+  sevdeskExportedAt DateTime?
+  sevdeskFolderId   String?
+
+  @@index([correspondent])
+  @@index([documentType])
+  @@index([sevdeskId])
+}
+
+model SevdeskConfig {
+  id             String   @id @default(cuid())
+  apiToken       String
+  parentFolderId String   @default("22128948")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model EmailAccount {
+  id           String         @id @default(cuid())
+  name         String
+  email        String
+  imapHost     String
+  imapPort     Int            @default(993)
+  imapSecure   Boolean        @default(true)
+  imapUser     String
+  imapPassword String
+  smtpHost     String
+  smtpPort     Int            @default(587)
+  smtpSecure   Boolean        @default(false)
+  smtpUser     String
+  smtpPassword String
+  isActive     Boolean        @default(true)
+  isDefault    Boolean        @default(false)
+  lastSync     DateTime?
+  syncError    String?
+  userId       String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  // V4.5: Quota-Informationen
+  quotaUsed    BigInt?        // Bytes verwendet
+  quotaTotal   BigInt?        // Bytes gesamt
+  quotaUpdated DateTime?
+  
+  user         User?          @relation(fields: [userId], references: [id])
+  folders      EmailFolder[]
+  messages     EmailMessage[]
+  rules        EmailRule[]
+  templates    EmailTemplate[]
+
+  @@index([userId])
+  @@index([email])
+}
+
+model EmailFolder {
+  id          String         @id @default(cuid())
+  accountId   String
+  name        String
+  path        String
+  type        String         @default("custom")
+  unreadCount Int            @default(0)
+  totalCount  Int            @default(0)
+  sortOrder   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  account     EmailAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messages    EmailMessage[]
+
+  @@unique([accountId, path])
+  @@index([accountId])
+  @@index([type])
+}
+
+model EmailMessage {
+  id           String            @id @default(cuid())
+  accountId    String
+  folderId     String
+  messageId    String?
+  uid          Int?
+  subject      String
+  fromAddress  String
+  fromName     String?
+  toAddresses  String[]
+  ccAddresses  String[]
+  bccAddresses String[]
+  replyTo      String?
+  textBody     String?
+  htmlBody     String?
+  snippet      String?
+  isRead       Boolean           @default(false)
+  isStarred    Boolean           @default(false)
+  isFlagged    Boolean           @default(false)
+  isDraft      Boolean           @default(false)
+  priority     String            @default("normal")
+  sentAt       DateTime?
+  receivedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  inReplyTo    String?
+  references   String[]
+  threadId     String?
+  crmDeals     CrmDeal[]
+  attachments  EmailAttachment[]
+  account      EmailAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  folder       EmailFolder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, uid])
+  @@index([accountId])
+  @@index([folderId])
+  @@index([isRead])
+  @@index([receivedAt])
+  @@index([threadId])
+}
+
+model EmailAttachment {
+  id          String       @id @default(cuid())
+  messageId   String
+  fileName    String
+  mimeType    String
+  fileSize    Int
+  contentId   String?
+  storagePath String?
+  createdAt   DateTime     @default(now())
+  message     EmailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+model EmailDraft {
+  id           String   @id @default(cuid())
+  accountId    String
+  subject      String   @default("")
+  toAddresses  String[]
+  ccAddresses  String[]
+  bccAddresses String[]
+  textBody     String?
+  htmlBody     String?
+  replyToId    String?
+  isReply      Boolean  @default(false)
+  isForward    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([accountId])
+}
+
+model TrustedSender {
+  id          String   @id @default(cuid())
+  userId      String
+  email       String
+  domain      String?
+  trustImages Boolean  @default(true)
+  trustLinks  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, email])
+  @@index([userId])
+  @@index([email])
+}
+
+model EmailSignature {
+  id             String   @id @default(cuid())
+  accountId      String
+  name           String
+  content        String
+  isDefault      Boolean  @default(false)
+  isReplyDefault Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([accountId])
+}
+
+model EmailCategory {
+  id          String                    @id @default(cuid())
+  userId      String
+  name        String
+  color       String
+  icon        String?
+  sortOrder   Int                       @default(0)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  assignments EmailCategoryAssignment[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model EmailCategoryAssignment {
+  id         String        @id @default(cuid())
+  messageId  String
+  categoryId String
+  createdAt  DateTime      @default(now())
+  category   EmailCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, categoryId])
+  @@index([messageId])
+  @@index([categoryId])
+}
+
+model UserPanelLayout {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  emailPanelSizes  Json     @default("{}")
+  emailListView    String   @default("list")
+  emailSortBy      String   @default("date")
+  emailSortOrder   String   @default("desc")
+  conversationView Boolean  @default(false)
+  previewPane      String   @default("right")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model EmailFavoriteFolder {
+  id         String   @id @default(cuid())
+  userId     String
+  folderId   String
+  folderPath String
+  accountId  String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, folderId])
+  @@index([userId])
+}
+
+// V4.5: E-Mail-Regeln für automatisches Verschieben/Kategorisieren
+model EmailRule {
+  id           String         @id @default(cuid())
+  accountId    String
+  name         String
+  isActive     Boolean        @default(true)
+  sortOrder    Int            @default(0)
+  
+  // Bedingungen (JSON-Array mit Objekten)
+  // Beispiel: [{"field": "from", "operator": "contains", "value": "newsletter"}]
+  conditions   Json           @default("[]")
+  matchAll     Boolean        @default(true) // true = AND, false = OR
+  
+  // Aktionen
+  moveToFolder String?        // Ziel-Ordner-Pfad
+  markAsRead   Boolean        @default(false)
+  markAsStarred Boolean       @default(false)
+  addCategory  String?        // Kategorie-ID
+  forwardTo    String?        // E-Mail-Adresse
+  deleteMessage Boolean       @default(false)
+  
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  account      EmailAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([isActive])
+}
+
+// V4.5: E-Mail-Templates (Schnellantworten)
+model EmailTemplate {
+  id           String         @id @default(cuid())
+  accountId    String?        // null = globales Template
+  name         String
+  subject      String         @default("")
+  content      String         // HTML-Inhalt
+  category     String?        // Kategorisierung (z.B. "Begrüßung", "Abwesenheit")
+  shortcut     String?        // Keyboard-Shortcut (z.B. "gr" für Grußformel)
+  isActive     Boolean        @default(true)
+  sortOrder    Int            @default(0)
+  
+  // Variablen-Platzhalter: {{name}}, {{datum}}, {{firma}} etc.
+  variables    String[]       @default([])
+  
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  account      EmailAccount?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([category])
+}
+
+model CrmContact {
+  id          String        @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String        @unique
+  phone       String?
+  mobile      String?
+  company     String?
+  position    String?
+  linkedInUrl String?
+  xingUrl     String?
+  website     String?
+  address     String?
+  city        String?
+  postalCode  String?
+  country     String?       @default("Deutschland")
+  notes       String?
+  tags        String[]
+  source      String?
+  isActive    Boolean       @default(true)
+  clientId    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  activities  CrmActivity[]
+  client      Client?       @relation(fields: [clientId], references: [id])
+  deals       CrmDeal[]
+  linkedNotes     Note[]           // V4.3: Verknüpfte Notizen
+  projects        CrmProject[]     // V4.4: Verknüpfte Projekte
+  calendarEvents  CalendarEvent[]  // V4.6: Verknüpfte Termine
+
+  @@index([company])
+  @@index([email])
+  @@index([lastName])
+}
+
+model CrmDeal {
+  id              String        @id @default(cuid())
+  title           String
+  description     String?
+  value           Float?
+  probability     Int?          @default(50)
+  phase           CrmDealPhase  @default(PHASE_1_ANFRAGE)
+  expectedClose   DateTime?
+  actualClose     DateTime?
+  sourceType      String?
+  sourceEmailId   String?
+  contactId       String?
+  assignedToId    String?
+  tags            String[]
+  matchedKeywords String[]
+  priority        String        @default("normal")
+  isWon           Boolean?
+  lostReason      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  activities      CrmActivity[]
+  assignedTo      User?         @relation(fields: [assignedToId], references: [id])
+  contact         CrmContact?   @relation(fields: [contactId], references: [id])
+  sourceEmail     EmailMessage? @relation(fields: [sourceEmailId], references: [id])
+  linkedNotes     Note[]           // V4.3: Verknüpfte Notizen
+  linkedProject   CrmProject?      // V4.4: Verknüpftes Projekt (wenn Deal gewonnen)
+  calendarEvents  CalendarEvent[]  // V4.6: Verknüpfte Termine (Follow-ups)
+
+  @@index([phase])
+  @@index([contactId])
+  @@index([assignedToId])
+  @@index([isWon])
+  @@index([createdAt])
+}
+
+model CrmActivity {
+  id          String          @id @default(cuid())
+  type        CrmActivityType
+  title       String
+  description String?
+  dueDate     DateTime?
+  isCompleted Boolean         @default(false)
+  completedAt DateTime?
+  dealId      String?
+  contactId   String?
+  createdById String?
+  metadata    Json?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  contact     CrmContact?     @relation(fields: [contactId], references: [id])
+  createdBy   User?           @relation(fields: [createdById], references: [id])
+  deal        CrmDeal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@index([contactId])
+  @@index([type])
+  @@index([dueDate])
+}
+
+model CrmPipelinePhase {
+  id           String       @id @default(cuid())
+  name         String
+  phase        CrmDealPhase @unique
+  description  String?
+  color        String       @default("#3b82f6")
+  icon         String?
+  sortOrder    Int          @default(0)
+  isActive     Boolean      @default(true)
+  autoAssignTo String?
+  autoNotify   Boolean      @default(false)
+  notifyEmails String[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model CrmKeywordConfig {
+  id               String    @id @default(cuid())
+  name             String
+  keywords         String[]
+  blacklistEmails  String[]
+  blacklistDomains String[]
+  autoAssignRules  Json?
+  isActive         Boolean   @default(true)
+  checkSubject     Boolean   @default(true)
+  checkBody        Boolean   @default(true)
+  caseSensitive    Boolean   @default(false)
+  totalScans       Int       @default(0)
+  totalMatches     Int       @default(0)
+  lastScanAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model CrmScanLog {
+  id              String   @id @default(cuid())
+  scanType        String
+  emailsScanned   Int      @default(0)
+  dealsCreated    Int      @default(0)
+  matchedKeywords String[]
+  errors          String?
+  duration        Int?
+  triggeredBy     String?
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([scanType])
+}
+
+enum UserRole {
+  USER
+  MANAGER
+  ADMIN
+  CONSULTANT
+  CUSTOMER_REF
+}
+
+enum FileCategory {
+  PROFILE
+  REFERENCES
+  TRAININGS
+  CERTIFICATES
+}
+
+enum PermissionArea {
+  PROFILE
+  REFERENCES
+  TRAININGS
+  FILES
+}
+
+enum CrmDealPhase {
+  PHASE_1_ANFRAGE
+  PHASE_2_ABSTIMMUNG
+  PHASE_3_PROFIL
+  PHASE_4_INTERVIEW
+  PHASE_5_AUFTRAG
+  PHASE_6_VERTRAG
+}
+
+enum CrmActivityType {
+  NOTE
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  DEAL_CREATED
+  PHASE_CHANGE
+}
+
+// ==========================================
+// CRM PROJECT MODULE (V4.4)
+// Lead/Deal → Projekt Workflow
+// ==========================================
+
+model CrmProject {
+  id              String              @id @default(cuid())
+  projectNumber   String              @unique
+  title           String
+  description     String?             @db.Text
+  status          CrmProjectStatus    @default(ACTIVE)
+  priority        CrmProjectPriority  @default(MEDIUM)
+  
+  // Kunde/Kontakt
+  contactId       String?
+  contact         CrmContact?         @relation(fields: [contactId], references: [id])
+  
+  // Ursprungs-Deal (optional - kann auch manuell erstellt werden)
+  sourceDealId    String?             @unique
+  sourceDeal      CrmDeal?            @relation(fields: [sourceDealId], references: [id])
+  
+  // Projekt-Manager (Hauptverantwortlicher)
+  managerId       String?
+  manager         User?               @relation("ProjectManager", fields: [managerId], references: [id])
+  
+  // Zeitrahmen
+  startDate       DateTime?
+  endDate         DateTime?
+  actualEndDate   DateTime?
+  
+  // Budget (optional)
+  budget          Float?
+  currency        String              @default("EUR")
+  
+  // Tags & Metadaten
+  tags            String[]
+  customFields    Json?
+  
+  // Timestamps
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  // Relationen
+  members         CrmProjectMember[]
+  modules         CrmProjectModule[]
+  notes           Note[]              @relation("ProjectNotes")
+  calendarEvents  CalendarEvent[]     // V4.6: Projekt-Termine & Deadlines
+  activities      CrmProjectActivity[]
+  milestones      CrmProjectMilestone[]
+  
+  @@index([status])
+  @@index([contactId])
+  @@index([managerId])
+  @@index([startDate])
+}
+
+model CrmProjectMember {
+  id          String              @id @default(cuid())
+  projectId   String
+  userId      String
+  role        CrmProjectMemberRole @default(MEMBER)
+  joinedAt    DateTime            @default(now())
+  
+  project     CrmProject          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model CrmProjectModule {
+  id          String      @id @default(cuid())
+  projectId   String
+  module      SmcModule
+  isEnabled   Boolean     @default(true)
+  settings    Json?
+  createdAt   DateTime    @default(now())
+  
+  project     CrmProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@unique([projectId, module])
+  @@index([projectId])
+}
+
+model CrmProjectMilestone {
+  id          String              @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      CrmMilestoneStatus  @default(PENDING)
+  sortOrder   Int                 @default(0)
+  completedAt DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  
+  project     CrmProject          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@index([projectId])
+  @@index([status])
+}
+
+model CrmProjectActivity {
+  id          String                  @id @default(cuid())
+  projectId   String
+  userId      String?
+  type        CrmProjectActivityType
+  title       String
+  description String?
+  metadata    Json?
+  createdAt   DateTime                @default(now())
+  
+  project     CrmProject              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@index([projectId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum CrmProjectStatus {
+  DRAFT
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum CrmProjectPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum CrmProjectMemberRole {
+  VIEWER
+  MEMBER
+  EDITOR
+  MANAGER
+  OWNER
+}
+
+enum SmcModule {
+  FILEMANAGER
+  DMS_PAPERLESS
+  MAIL
+  CALENDAR
+  NOTES
+  CRM
+  ACCOUNTING
+}
+
+enum CrmMilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum CrmProjectActivityType {
+  CREATED
+  UPDATED
+  STATUS_CHANGE
+  MEMBER_ADDED
+  MEMBER_REMOVED
+  MODULE_ENABLED
+  MODULE_DISABLED
+  MILESTONE_ADDED
+  MILESTONE_COMPLETED
+  NOTE_ADDED
+  COMMENT
+}
+
+// ==========================================
+// NOTES / TODO / BACKLOG MODULE (V4.3)
+// ==========================================
+
+model Note {
+  id          String       @id @default(cuid())
+  userId      String
+  title       String
+  content     String?      @db.Text
+  category    NoteCategory @default(PERSONAL)
+  status      NoteStatus   @default(OPEN)
+  priority    NotePriority @default(MEDIUM)
+  dueDate     DateTime?
+  tags        String[]
+  isPinned    Boolean      @default(false)
+  isArchived  Boolean      @default(false)
+  
+  // Optional CRM-Verknüpfung
+  crmContactId String?
+  crmDealId    String?
+  crmProjectId String?
+  crmContact   CrmContact?  @relation(fields: [crmContactId], references: [id], onDelete: SetNull)
+  crmDeal      CrmDeal?     @relation(fields: [crmDealId], references: [id], onDelete: SetNull)
+  crmProject   CrmProject?  @relation("ProjectNotes", fields: [crmProjectId], references: [id], onDelete: SetNull)
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@index([crmContactId])
+  @@index([crmDealId])
+  @@index([crmProjectId])
+}
+
+enum NoteCategory {
+  PERSONAL
+  TODO
+  BACKLOG_DEV
+  DRAFT
+  IMPORTANT
+}
+
+enum NoteStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum NotePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ==========================================
+// CALENDAR MODULE (V4.3 - CalDAV ready)
+// ==========================================
+
+model CalendarAccount {
+  id            String           @id @default(cuid())
+  userId        String
+  name          String
+  provider      CalendarProvider
+  caldavUrl     String?
+  username      String?
+  password      String?          // Encrypted
+  color         String           @default("#3b82f6")
+  isActive      Boolean          @default(true)
+  isDefault     Boolean          @default(false)
+  lastSync      DateTime?
+  syncError     String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events        CalendarEvent[]
+
+  @@unique([userId, caldavUrl])
+  @@index([userId])
+}
+
+model CalendarEvent {
+  id              String           @id @default(cuid())
+  accountId       String?
+  userId          String
+  externalId      String?          // CalDAV UID
+  icsUid          String?          // ICS UID für E-Mail-Einladungen
+  title           String
+  description     String?          @db.Text
+  location        String?
+  startDate       DateTime
+  endDate         DateTime?
+  allDay          Boolean          @default(false)
+  isRecurring     Boolean          @default(false)
+  recurrenceRule  String?          // iCal RRULE (z.B. "FREQ=WEEKLY;BYDAY=MO,WE,FR")
+  recurrenceEnd   DateTime?        // Ende der Wiederholung
+  color           String?
+  reminderMinutes Int?
+  isPrivate       Boolean          @default(false)
+  status          EventStatus      @default(CONFIRMED)
+  
+  // CRM Integration
+  contactId       String?
+  contact         CrmContact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  dealId          String?
+  deal            CrmDeal?         @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  projectId       String?
+  project         CrmProject?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  // E-Mail Meeting Integration
+  organizer       String?          // E-Mail des Organisators
+  attendeesJson   String?          @db.Text // JSON Array der Teilnehmer
+  responseStatus  EventResponse?   // Eigene Antwort (für Einladungen)
+  sourceEmailId   String?          // Verknüpfung zur E-Mail
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  account         CalendarAccount? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([startDate])
+  @@index([externalId])
+  @@index([icsUid])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([projectId])
+}
+
+enum CalendarProvider {
+  LOCAL
+  NEXTCLOUD
+  GOOGLE
+  APPLE
+  CALDAV_GENERIC
+}
+
+enum EventStatus {
+  CONFIRMED
+  TENTATIVE
+  CANCELLED
+}
+
+enum EventResponse {
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+  NEEDS_ACTION
+}

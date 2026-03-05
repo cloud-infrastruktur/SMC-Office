@@ -1,0 +1,462 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   KOMPAKTE DARSTELLUNG FÜR GROSSE MONITORE
+   Optimiert für 5K 34" Ultrawide (3008x1269)
+   ======================================== */
+
+/* Basis-Skalierung - wird durch A-/A+ angepasst */
+html {
+  font-size: 100%; /* Standard: 16px */
+}
+
+/* Kompaktere Darstellung bei großen Viewports */
+@media (min-width: 1920px) {
+  html {
+    font-size: 93.75%; /* 15px */
+  }
+}
+
+@media (min-width: 2560px) {
+  html {
+    font-size: 87.5%; /* 14px */
+  }
+}
+
+@media (min-width: 3000px) {
+  html {
+    font-size: 81.25%; /* 13px - für 5K Monitore */
+  }
+}
+ 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+ 
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ========================================
+   RESPONSIVE LAYOUT FÜR GROSSE MONITORE
+   27" - 34" Ultrawide Optimierung
+   ======================================== */
+
+@layer utilities {
+  /* ========================================
+     MOBILE-FIRST RESPONSIVE UTILITIES
+     iPhone 15 Pro Max (430px) & iPad 12.9" (1024px)
+     ======================================== */
+  
+  /* Mobile Touch Targets - min 44px für iOS */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile-optimierte Abstände */
+  .mobile-safe-padding {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  /* Mobile Section Spacing */
+  .section-mobile {
+    @apply py-8 px-4;
+  }
+
+  @media (min-width: 768px) {
+    .section-mobile {
+      @apply py-12 px-6;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .section-mobile {
+      @apply py-16 px-8;
+    }
+  }
+
+  /* Mobile-First Text Sizes */
+  .text-mobile-hero {
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    line-height: 1.1;
+  }
+
+  .text-mobile-tagline {
+    font-size: clamp(1rem, 4vw, 1.5rem);
+    line-height: 1.3;
+  }
+
+  .text-mobile-body {
+    font-size: clamp(0.9rem, 3vw, 1.125rem);
+    line-height: 1.6;
+  }
+
+  /* Adaptive Container für große Screens */
+  .container-adaptive {
+    @apply mx-auto px-4;
+    max-width: 100%; /* Mobile First */
+  }
+
+  @media (min-width: 640px) {
+    .container-adaptive {
+      max-width: 640px;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container-adaptive {
+      max-width: 768px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-adaptive {
+      max-width: 1024px;
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container-adaptive {
+      max-width: 1280px;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .container-adaptive {
+      max-width: 1400px; /* 27" Standard */
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .container-adaptive {
+      max-width: 1600px; /* 27" Full HD */
+      padding-left: 3rem;
+      padding-right: 3rem;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .container-adaptive {
+      max-width: 1920px; /* 32" QHD */
+      padding-left: 4rem;
+      padding-right: 4rem;
+    }
+  }
+
+  @media (min-width: 3440px) {
+    .container-adaptive {
+      max-width: 2200px; /* 34" Ultrawide */
+      padding-left: 6rem;
+      padding-right: 6rem;
+    }
+  }
+
+  /* Fluid Typography für große Screens */
+  .text-fluid-xl {
+    font-size: clamp(1.25rem, 1rem + 0.5vw, 1.75rem);
+  }
+
+  .text-fluid-2xl {
+    font-size: clamp(1.5rem, 1.2rem + 0.6vw, 2rem);
+  }
+
+  .text-fluid-3xl {
+    font-size: clamp(1.875rem, 1.5rem + 0.75vw, 2.5rem);
+  }
+
+  .text-fluid-4xl {
+    font-size: clamp(2.25rem, 1.8rem + 0.9vw, 3rem);
+  }
+
+  .text-fluid-5xl {
+    font-size: clamp(3rem, 2.4rem + 1.2vw, 4rem);
+  }
+
+  /* Adaptive Spacing für große Screens */
+  .section-padding-adaptive {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+
+  @media (min-width: 1920px) {
+    .section-padding-adaptive {
+      padding-top: 6rem;
+      padding-bottom: 6rem;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .section-padding-adaptive {
+      padding-top: 8rem;
+      padding-bottom: 8rem;
+    }
+  }
+
+  @media (min-width: 3440px) {
+    .section-padding-adaptive {
+      padding-top: 10rem;
+      padding-bottom: 10rem;
+    }
+  }
+
+  /* Grid-Layouts für große Screens */
+  .grid-adaptive-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+
+  @media (min-width: 2560px) {
+    .grid-adaptive-2 {
+      gap: 2rem;
+    }
+  }
+
+  @media (min-width: 3440px) {
+    .grid-adaptive-2 {
+      gap: 3rem;
+    }
+  }
+
+  .grid-adaptive-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  @media (min-width: 2560px) {
+    .grid-adaptive-3 {
+      gap: 2rem;
+    }
+  }
+
+  @media (min-width: 3440px) {
+    .grid-adaptive-3 {
+      gap: 3rem;
+    }
+  }
+
+  .grid-adaptive-4 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  @media (min-width: 1920px) {
+    .grid-adaptive-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .grid-adaptive-4 {
+      gap: 2rem;
+    }
+  }
+
+  @media (min-width: 3440px) {
+    .grid-adaptive-4 {
+      gap: 3rem;
+    }
+  }
+
+  /* ========================================
+     KOMPAKTE KARTEN & CONTAINER
+     Für große Monitore optimiert
+     ======================================== */
+  
+  /* Kompakte Card-Padding */
+  .card-compact {
+    @apply p-4;
+  }
+
+  @media (min-width: 1920px) {
+    .card-compact {
+      @apply p-3;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .card-compact {
+      @apply p-2.5;
+    }
+  }
+
+  /* Kompakte Section-Padding */
+  .section-compact {
+    @apply py-8 px-4;
+  }
+
+  @media (min-width: 768px) {
+    .section-compact {
+      @apply py-10 px-6;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .section-compact {
+      @apply py-12 px-6;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .section-compact {
+      padding-top: 3rem;
+      padding-bottom: 3rem;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .section-compact {
+      padding-top: 2.5rem;
+      padding-bottom: 2.5rem;
+    }
+  }
+
+  /* Grid mit mehr Spalten bei großen Screens */
+  .grid-auto-fit {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  @media (min-width: 1920px) {
+    .grid-auto-fit {
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 0.875rem;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .grid-auto-fit {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+  }
+
+  @media (min-width: 3000px) {
+    .grid-auto-fit {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.625rem;
+    }
+  }
+
+  /* Kompakte Überschriften */
+  .heading-compact {
+    @apply text-2xl font-bold;
+  }
+
+  @media (min-width: 1920px) {
+    .heading-compact {
+      @apply text-xl;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .heading-compact {
+      @apply text-lg;
+    }
+  }
+
+  /* Kompakter Text */
+  .text-compact {
+    @apply text-base;
+  }
+
+  @media (min-width: 1920px) {
+    .text-compact {
+      @apply text-sm;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .text-compact {
+      font-size: 0.8125rem;
+    }
+  }
+
+  /* Kompakte Icons */
+  .icon-compact {
+    @apply w-6 h-6;
+  }
+
+  @media (min-width: 1920px) {
+    .icon-compact {
+      @apply w-5 h-5;
+    }
+  }
+
+  @media (min-width: 2560px) {
+    .icon-compact {
+      @apply w-4 h-4;
+    }
+  }
+}

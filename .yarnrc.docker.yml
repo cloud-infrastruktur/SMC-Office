@@ -1,0 +1,15 @@
+# ==============================================================================
+# Yarn Berry Configuration - Docker Build
+# ==============================================================================
+# Diese Konfiguration wird im Docker-Build verwendet.
+# Klassischer node-modules Modus für maximale Kompatibilität.
+# ==============================================================================
+
+# Node-Modules Linker (klassisch)
+nodeLinker: node-modules
+
+# Telemetry deaktivieren
+enableTelemetry: false
+
+# Immutable Installs für reproduzierbare Builds
+enableImmutableInstalls: true

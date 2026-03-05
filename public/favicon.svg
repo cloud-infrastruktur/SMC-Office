@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#94a3b8;stop-opacity:1"/>
+      <stop offset="50%" style="stop-color:#e2e8f0;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#94a3b8;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" fill="url(#blueGrad)"/>
+  <path d="M48 80 L48 176 L64 176 L64 136 L88 136 L88 120 L64 120 L64 96 L96 96 L96 80 Z" fill="url(#silverGrad)"/>
+  <path d="M112 80 L112 176 L128 176 L128 136 L144 176 L160 176 L176 136 L176 176 L192 176 L192 80 L168 80 L152 128 L136 80 Z" fill="#ffffff"/>
+  <path d="M208 80 L208 96 L224 96 L224 160 L208 160 L208 176 L240 176 L240 160 L240 96 L240 80 Z" fill="url(#silverGrad)"/>
+</svg>
