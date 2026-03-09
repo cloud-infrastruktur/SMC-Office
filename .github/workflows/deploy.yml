@@ -200,7 +200,7 @@ jobs:
             echo "════════════════════════════════════════════════════════════"
             
             # Wechsel ins Deployment-Verzeichnis
-            cd /opt/smc-office
+            cd /DATA/AppData/SMC-Office-PreProd/ops/smc-office
             
             # Login zu GitHub Container Registry
             echo ""
