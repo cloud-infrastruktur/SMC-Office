@@ -54,9 +54,14 @@ export default function AboutPage() {
         const profileData = profileRes.ok ? await profileRes.json() : [];
         const trainingsData = trainingsRes.ok ? await trainingsRes.json() : [];
 
+        // Zähle einzigartige Kunden (nicht Projekte) für Referenz-Kunden
+        const uniqueClients = new Set(
+          references.map((r: { displayClient?: string; client?: string }) => r.displayClient || r.client)
+        ).size;
+
         setStats({
           projects: projects.length,
-          references: references.length,
+          references: uniqueClients,
           years: YEARS_PROJECT_EXPERIENCE,
           certificates: trainingsData.length || 13,
         });

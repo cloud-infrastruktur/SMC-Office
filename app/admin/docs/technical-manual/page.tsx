@@ -489,65 +489,67 @@ volumes:
               </p>
 
               <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">Datenbankmodelle</h3>
-              <CodeBlock language="prisma" code={`// 6-Phasen Pipeline
-enum CrmDealPhase {
-  ANFRAGE      // Phase 1: Projektanfrage
-  ABSTIMMUNG   // Phase 2: In Abstimmung
-  PROFIL       // Phase 3: Profil vorgestellt
-  INTERVIEW    // Phase 4: Kundengespräch
-  AUFTRAG      // Phase 5: Auftrag liegt vor
-  VERTRAG      // Phase 6: Vertragsabstimmung
+              <CodeBlock language="prisma" code={`// V4.8.9: Organization-Modell (Outlook-kompatibel)
+model Organization {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  displayName String?
+  industry    String?
+  website     String?
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  postalCode  String?
+  country     String       @default("Deutschland")
+  users       User[]       // Zugeordnete Benutzer
+  contacts    CrmContact[] // Zugeordnete Kontakte
 }
 
-// Kontakte/Leads
+// V4.8.9: User-CRM-Verknüpfung
+model User {
+  organizationId   String?       // FK zu Organization
+  organizationRole String?       // Position in Organisation
+  crmContact       CrmContact?   // 1:1 Verknüpfung (User = Portal-Kontakt)
+}
+
+// Kontakte mit Organization & User Verknüpfung
 model CrmContact {
-  id        String   @id @default(cuid())
-  firstName String
-  lastName  String
-  email     String   @unique
-  phone     String?
-  company   String?
-  position  String?
-  linkedInUrl String?
-  deals     CrmDeal[]
+  id             String        @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String        @unique
+  phone          String?
+  company        String?
+  position       String?
+  linkedInUrl    String?
+  userId         String?       @unique // 1:1 User-Verknüpfung
+  organizationId String?       // FK zu Organization
+  user           User?
+  organization   Organization?
+  deals          CrmDeal[]
 }
 
-// Deals/Opportunities
+// Deals/Opportunities (mit Kalender/Notizen)
 model CrmDeal {
-  id              String        @id @default(cuid())
+  id              String          @id
   title           String
-  description     String?
-  value           Float?        // Geschätzter Wert
-  probability     Int           @default(50)
-  phase           CrmDealPhase  @default(ANFRAGE)
-  sourceType      String        @default("manual")
-  sourceEmailId   String?       // Verknüpfung zur E-Mail
-  matchedKeywords String[]      // Gefundene Keywords
-  contact         CrmContact?
-  assignedTo      User?
-  activities      CrmActivity[]
+  value           Float?
+  phase           CrmDealPhase
+  sourceEmailId   String?
+  linkedNotes     Note[]          // Verknüpfte Notizen
+  linkedProject   CrmProject?     // Gewonnenes Projekt
+  calendarEvents  CalendarEvent[] // Follow-up Termine
 }
 
-// Aktivitäten (Notes, Tasks, Calls)
-model CrmActivity {
-  type        CrmActivityType
-  title       String
-  description String?
-  dueDate     DateTime?
-  isCompleted Boolean @default(false)
-  deal        CrmDeal?
-  contact     CrmContact?
-}
-
-// Keyword-Konfiguration
-model CrmKeywordConfig {
-  id              String   @id @default(cuid())
-  keywords        String[] // z.B. ["ITIL", "Projektmanagement"]
-  blacklistEmails String[] // Ignorierte E-Mails
-  checkSubject    Boolean  @default(true)
-  checkBody       Boolean  @default(true)
-  totalScans      Int      @default(0)
-  totalMatches    Int      @default(0)
+// V4.8.9: Cross-Module File Attachments
+model FileAttachment {
+  id         String      @id @default(cuid())
+  fileId     String
+  entityType String      // CrmContact, CrmDeal, CrmProject, Note, CalendarEvent
+  entityId   String
+  file       ManagedFile
+  @@unique([fileId, entityType, entityId])
 }`} />
 
               <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3">API-Endpunkte</h3>
@@ -573,6 +575,14 @@ model CrmKeywordConfig {
                     <tr><td className="px-4 py-2 font-mono text-green-600">GET</td><td className="px-4 py-2">/api/crm/keywords</td><td className="px-4 py-2">Keyword-Konfiguration</td></tr>
                     <tr><td className="px-4 py-2 font-mono text-yellow-600">PUT</td><td className="px-4 py-2">/api/crm/keywords</td><td className="px-4 py-2">Keywords aktualisieren</td></tr>
                     <tr><td className="px-4 py-2 font-mono text-blue-600">POST</td><td className="px-4 py-2">/api/crm/scan</td><td className="px-4 py-2">E-Mails scannen</td></tr>
+                    <tr className="bg-blue-50"><td colSpan={3} className="px-4 py-2 font-semibold text-blue-800">V4.8.9: Organizations & Cross-Module</td></tr>
+                    <tr><td className="px-4 py-2 font-mono text-green-600">GET</td><td className="px-4 py-2">/api/admin/organizations</td><td className="px-4 py-2">Alle Organisationen</td></tr>
+                    <tr><td className="px-4 py-2 font-mono text-blue-600">POST</td><td className="px-4 py-2">/api/admin/organizations</td><td className="px-4 py-2">Organisation erstellen</td></tr>
+                    <tr><td className="px-4 py-2 font-mono text-yellow-600">PUT</td><td className="px-4 py-2">/api/admin/organizations/[id]</td><td className="px-4 py-2">Organisation bearbeiten</td></tr>
+                    <tr><td className="px-4 py-2 font-mono text-green-600">GET</td><td className="px-4 py-2">/api/admin/filemanager/attachments</td><td className="px-4 py-2">File-Attachments für Entity</td></tr>
+                    <tr><td className="px-4 py-2 font-mono text-blue-600">POST</td><td className="px-4 py-2">/api/admin/filemanager/attachments</td><td className="px-4 py-2">Datei mit CRM verknüpfen</td></tr>
+                    <tr><td className="px-4 py-2 font-mono text-green-600">GET</td><td className="px-4 py-2">/api/email/messages/link-crm</td><td className="px-4 py-2">CRM-Links für E-Mail</td></tr>
+                    <tr><td className="px-4 py-2 font-mono text-blue-600">POST</td><td className="px-4 py-2">/api/email/messages/link-crm</td><td className="px-4 py-2">E-Mail mit Deal verknüpfen</td></tr>
                   </tbody>
                 </table>
               </div>

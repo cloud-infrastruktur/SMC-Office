@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
       take: limit,
       include: {
         client: true,
+        organization: { select: { id: true, name: true, displayName: true } },
+        user: { select: { id: true, name: true, email: true, role: true } },
         _count: { select: { deals: true } },
       },
     });
@@ -82,6 +84,8 @@ export async function POST(request: NextRequest) {
       tags,
       source,
       clientId,
+      organizationId,
+      userId,
     } = body;
 
     if (!firstName || !lastName || !email) {
@@ -101,6 +105,19 @@ export async function POST(request: NextRequest) {
         { error: "Ein Kontakt mit dieser E-Mail existiert bereits" },
         { status: 409 }
       );
+    }
+
+    // Falls userId angegeben, prüfen ob bereits vergeben
+    if (userId) {
+      const userLinked = await prisma.crmContact.findFirst({
+        where: { userId },
+      });
+      if (userLinked) {
+        return NextResponse.json(
+          { error: "Dieser Benutzer ist bereits mit einem anderen Kontakt verknüpft" },
+          { status: 409 }
+        );
+      }
     }
 
     const contact = await prisma.crmContact.create({
@@ -123,8 +140,14 @@ export async function POST(request: NextRequest) {
         tags: tags || [],
         source: source || "manual",
         clientId,
+        organizationId: organizationId || null,
+        userId: userId || null,
       },
-      include: { client: true },
+      include: { 
+        client: true,
+        organization: { select: { id: true, name: true, displayName: true } },
+        user: { select: { id: true, name: true, email: true, role: true } },
+      },
     });
 
     return NextResponse.json(contact, { status: 201 });

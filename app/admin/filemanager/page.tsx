@@ -20,9 +20,14 @@ import {
   X,
   Plus,
   ChevronRight,
+  Settings,
+  Shield,
+  FolderDown,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 interface ManagedFile {
@@ -44,6 +49,10 @@ interface FileFolder {
   name: string;
   slug: string;
   parentId: string | null;
+  // V4.8.9: Berechtigungskonzept
+  isProtected?: boolean;
+  isDownloadFolder?: boolean;
+  permissionArea?: 'PROFILE' | 'REFERENCES' | 'TRAININGS' | 'FILES' | null;
   _count?: { files: number };
 }
 
@@ -65,6 +74,14 @@ export default function FileManagerPage() {
   // Rename folder state
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [renameFolderName, setRenameFolderName] = useState("");
+  
+  // V4.8.9: Ordner-Einstellungen Dialog
+  const [settingsFolder, setSettingsFolder] = useState<FileFolder | null>(null);
+  const [folderSettings, setFolderSettings] = useState({
+    isProtected: false,
+    isDownloadFolder: false,
+    permissionArea: null as 'PROFILE' | 'REFERENCES' | 'TRAININGS' | 'FILES' | null
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -281,6 +298,52 @@ export default function FileManagerPage() {
     setRenameFolderName(folder.name);
   }
 
+  // V4.8.9: Ordner-Einstellungen öffnen
+  function openFolderSettings(folder: FileFolder, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSettingsFolder(folder);
+    setFolderSettings({
+      isProtected: folder.isProtected || false,
+      isDownloadFolder: folder.isDownloadFolder || false,
+      permissionArea: folder.permissionArea || null
+    });
+  }
+
+  // V4.8.9: Ordner-Einstellungen speichern
+  async function saveFolderSettings() {
+    if (!settingsFolder) return;
+
+    try {
+      const res = await fetch(`/api/admin/filemanager/folders/${settingsFolder.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(folderSettings),
+      });
+
+      if (res.ok) {
+        toast({ title: "Erfolg", description: "Ordner-Einstellungen gespeichert" });
+        setSettingsFolder(null);
+        fetchContent();
+      } else {
+        const data = await res.json();
+        toast({ title: "Fehler", description: data.error || "Einstellungen konnten nicht gespeichert werden", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Fehler", description: "Einstellungen konnten nicht gespeichert werden", variant: "destructive" });
+    }
+  }
+
+  // V4.8.9: Permission Area Label
+  function getPermissionAreaLabel(area: string | null) {
+    const labels: Record<string, string> = {
+      'PROFILE': 'Profil',
+      'REFERENCES': 'Kunden-Referenzen',
+      'TRAININGS': 'Zertifikate & Trainings',
+      'FILES': 'Dateien'
+    };
+    return area ? labels[area] || area : 'Dateien';
+  }
+
   function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -419,8 +482,40 @@ export default function FileManagerPage() {
                   </div>
                 ) : (
                   <>
-                    <span className="flex-1 font-medium">{folder.name}</span>
-                    <span className="text-sm text-gray-500">{folder._count?.files || 0} Dateien</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{folder.name}</span>
+                        {/* V4.8.9: Berechtigungs-Badges */}
+                        {folder.isProtected && (
+                          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            <Lock className="w-3 h-3 mr-1" />
+                            Geschützt
+                          </Badge>
+                        )}
+                        {folder.isDownloadFolder && (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            <FolderDown className="w-3 h-3 mr-1" />
+                            Download
+                          </Badge>
+                        )}
+                        {folder.permissionArea && (
+                          <Badge variant="outline" className="text-xs">
+                            <Shield className="w-3 h-3 mr-1" />
+                            {getPermissionAreaLabel(folder.permissionArea)}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-500">{folder._count?.files || 0} Dateien</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-gray-600"
+                      onClick={(e) => openFolderSettings(folder, e)}
+                      title="Ordner-Einstellungen"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -433,12 +528,13 @@ export default function FileManagerPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-red-600"
+                      className={folder.isProtected ? "text-gray-300 cursor-not-allowed" : "text-red-600"}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteFolder(folder.id);
+                        if (!folder.isProtected) handleDeleteFolder(folder.id);
                       }}
-                      title="Ordner löschen"
+                      disabled={folder.isProtected}
+                      title={folder.isProtected ? "Geschützter Ordner" : "Ordner löschen"}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -503,6 +599,111 @@ export default function FileManagerPage() {
               </div>
               <iframe src={previewFile.url} className="flex-1 w-full" />
             </div>
+          </div>
+        )}
+
+        {/* V4.8.9: Ordner-Einstellungen Modal */}
+        {settingsFolder && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md"
+            >
+              <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
+                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Ordner-Einstellungen
+                </h3>
+                <Button variant="ghost" size="sm" onClick={() => setSettingsFolder(null)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+                  <Folder className="w-8 h-8 text-yellow-500" />
+                  <span className="font-medium text-gray-900 dark:text-white">{settingsFolder.name}</span>
+                </div>
+
+                {/* isProtected */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-amber-600" />
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">Geschützter Ordner</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Kann nicht gelöscht werden</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setFolderSettings(prev => ({ ...prev, isProtected: !prev.isProtected }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      folderSettings.isProtected ? 'bg-amber-500' : 'bg-gray-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                      folderSettings.isProtected ? 'left-7' : 'left-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* isDownloadFolder */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FolderDown className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">Download-Ordner</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Erscheint im Download-Modul</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setFolderSettings(prev => ({ ...prev, isDownloadFolder: !prev.isDownloadFolder }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      folderSettings.isDownloadFolder ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                      folderSettings.isDownloadFolder ? 'left-7' : 'left-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* permissionArea (nur wenn isDownloadFolder aktiv) */}
+                {folderSettings.isDownloadFolder && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Shield className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">Berechtigungsbereich</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Wer kann diesen Ordner sehen?</p>
+                      </div>
+                    </div>
+                    <select
+                      value={folderSettings.permissionArea || 'FILES'}
+                      onChange={(e) => setFolderSettings(prev => ({ 
+                        ...prev, 
+                        permissionArea: e.target.value as any 
+                      }))}
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="FILES">Dateien (FILES)</option>
+                      <option value="PROFILE">Profil (PROFILE)</option>
+                      <option value="REFERENCES">Kunden-Referenzen (REFERENCES)</option>
+                      <option value="TRAININGS">Zertifikate & Trainings (TRAININGS)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setSettingsFolder(null)}>
+                  Abbrechen
+                </Button>
+                <Button onClick={saveFolderSettings}>
+                  Speichern
+                </Button>
+              </div>
+            </motion.div>
           </div>
         )}
       </div>

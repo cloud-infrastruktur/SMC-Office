@@ -40,6 +40,7 @@ import {
   Play,
   Pause,
   Archive,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hasAdminAccess } from "@/lib/types";
@@ -1002,6 +1003,7 @@ function KeywordsTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
+  const [newNegativeKeyword, setNewNegativeKeyword] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -1036,7 +1038,7 @@ function KeywordsTab() {
     if (newKeyword.trim() && config) {
       setConfig({
         ...config,
-        keywords: [...config.keywords, newKeyword.trim()],
+        keywords: [...(config.keywords || []), newKeyword.trim()],
       });
       setNewKeyword("");
     }
@@ -1051,6 +1053,25 @@ function KeywordsTab() {
     }
   };
 
+  const addNegativeKeyword = () => {
+    if (newNegativeKeyword.trim() && config) {
+      setConfig({
+        ...config,
+        negativeKeywords: [...(config.negativeKeywords || []), newNegativeKeyword.trim()],
+      });
+      setNewNegativeKeyword("");
+    }
+  };
+
+  const removeNegativeKeyword = (keyword: string) => {
+    if (config) {
+      setConfig({
+        ...config,
+        negativeKeywords: (config.negativeKeywords || []).filter((k: string) => k !== keyword),
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1060,13 +1081,17 @@ function KeywordsTab() {
   }
 
   return (
-    <div className="max-w-4xl">
-      <div className="bg-white rounded-xl shadow p-6">
+    <div className="max-w-4xl space-y-6">
+      {/* Positive Keywords */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Keyword-Konfiguration</h2>
-            <p className="text-sm text-gray-500">
-              Keywords für automatische Deal-Erstellung aus E-Mails
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              Positive Keywords
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              E-Mails mit diesen Keywords werden als Deal erstellt
             </p>
           </div>
           <Button onClick={handleSave} disabled={saving}>
@@ -1083,24 +1108,24 @@ function KeywordsTab() {
         <div className="flex gap-2 mb-4">
           <input
             type="text"
-            placeholder="Neues Keyword hinzufügen..."
+            placeholder="Neues positives Keyword hinzufügen..."
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addKeyword()}
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
           />
-          <Button onClick={addKeyword}>
+          <Button onClick={addKeyword} className="bg-green-600 hover:bg-green-700">
             <Plus className="w-4 h-4 mr-2" />
             Hinzufügen
           </Button>
         </div>
 
         {/* Keywords List */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2">
           {config?.keywords?.map((keyword: string) => (
             <span
               key={keyword}
-              className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2 group"
+              className="px-3 py-1.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm flex items-center gap-2 group"
             >
               {keyword}
               <button
@@ -1111,12 +1136,74 @@ function KeywordsTab() {
               </button>
             </span>
           ))}
+          {(!config?.keywords || config.keywords.length === 0) && (
+            <p className="text-sm text-gray-400 italic">Keine positiven Keywords definiert</p>
+          )}
+        </div>
+      </div>
+
+      {/* Negative Keywords */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <XCircle className="w-5 h-5 text-red-500" />
+            Negative Keywords (Ausschluss)
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            E-Mails mit diesen Keywords werden NICHT als Deal erstellt, auch wenn positive Keywords vorhanden sind
+          </p>
         </div>
 
-        {/* Settings */}
-        <div className="border-t pt-6 space-y-4">
-          <h3 className="font-medium text-gray-900 mb-4">Scan-Einstellungen</h3>
-          
+        {/* Add Negative Keyword */}
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Neues negatives Keyword hinzufügen (z.B. Glasfaser)..."
+            value={newNegativeKeyword}
+            onChange={(e) => setNewNegativeKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addNegativeKeyword()}
+            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+          />
+          <Button onClick={addNegativeKeyword} className="bg-red-600 hover:bg-red-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Hinzufügen
+          </Button>
+        </div>
+
+        {/* Negative Keywords List */}
+        <div className="flex flex-wrap gap-2">
+          {config?.negativeKeywords?.map((keyword: string) => (
+            <span
+              key={keyword}
+              className="px-3 py-1.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full text-sm flex items-center gap-2 group"
+            >
+              {keyword}
+              <button
+                onClick={() => removeNegativeKeyword(keyword)}
+                className="hover:text-gray-900 transition-colors"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {(!config?.negativeKeywords || config.negativeKeywords.length === 0) && (
+            <p className="text-sm text-gray-400 italic">Keine negativen Keywords definiert</p>
+          )}
+        </div>
+
+        {/* Info Box */}
+        <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            <strong>Beispiel:</strong> Positive Keywords enthalten "Projektmanagement", negative Keywords enthalten "Glasfaser". 
+            Eine E-Mail mit "Projektmanagement für Glasfaser-Ausbau" wird <strong>nicht</strong> als Deal erstellt.
+          </p>
+        </div>
+      </div>
+
+      {/* Settings */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+        <h3 className="font-medium text-gray-900 dark:text-white mb-4">Scan-Einstellungen</h3>
+        <div className="space-y-4">
           <label className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -1124,7 +1211,7 @@ function KeywordsTab() {
               onChange={(e) => setConfig({ ...config, checkSubject: e.target.checked })}
               className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700">Betreff prüfen</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Betreff prüfen</span>
           </label>
 
           <label className="flex items-center gap-3">
@@ -1134,7 +1221,7 @@ function KeywordsTab() {
               onChange={(e) => setConfig({ ...config, checkBody: e.target.checked })}
               className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700">E-Mail-Text prüfen</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">E-Mail-Text prüfen</span>
           </label>
 
           <label className="flex items-center gap-3">
@@ -1144,35 +1231,35 @@ function KeywordsTab() {
               onChange={(e) => setConfig({ ...config, caseSensitive: e.target.checked })}
               className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700">Groß-/Kleinschreibung beachten</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Groß-/Kleinschreibung beachten</span>
           </label>
         </div>
+      </div>
 
-        {/* Stats */}
-        {config && (
-          <div className="border-t pt-6 mt-6">
-            <h3 className="font-medium text-gray-900 mb-4">Statistiken</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-gray-900">{config.totalScans || 0}</p>
-                <p className="text-sm text-gray-500">Scans gesamt</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-gray-900">{config.totalMatches || 0}</p>
-                <p className="text-sm text-gray-500">Matches gesamt</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-gray-900">
-                  {config.lastScanAt
-                    ? new Date(config.lastScanAt).toLocaleDateString("de-DE")
-                    : "-"}
-                </p>
-                <p className="text-sm text-gray-500">Letzter Scan</p>
-              </div>
+      {/* Stats */}
+      {config && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
+          <h3 className="font-medium text-gray-900 dark:text-white mb-4">Statistiken</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{config.totalScans || 0}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Scans gesamt</p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{config.totalMatches || 0}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Matches gesamt</p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {config.lastScanAt
+                  ? new Date(config.lastScanAt).toLocaleDateString("de-DE")
+                  : "-"}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Letzter Scan</p>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

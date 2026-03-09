@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import { getPresignedDownloadUrl, getFileUrl } from "@/lib/storage";
+import { PermissionArea } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +18,38 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = (session.user as any).id;
+    const userRole = ((session.user as any).role || 'USER').toUpperCase();
+    const isAdminOrManager = ['ADMIN', 'MANAGER'].includes(userRole);
+
     const { id } = await params;
 
     // Zuerst in ManagedFile suchen (vereinheitlichtes System)
     const managedFile = await prisma.managedFile.findUnique({
       where: { id },
+      include: { folder: true }
     });
 
     if (managedFile) {
+      // Berechtigung prüfen (außer für Admin/Manager)
+      if (!isAdminOrManager && managedFile.folder) {
+        // permissionArea aus dem Ordner lesen (null = FILES)
+        const requiredPermission = managedFile.folder.permissionArea || 'FILES';
+        
+        const hasPermission = await prisma.userPermission.findFirst({
+          where: {
+            userId,
+            area: requiredPermission as PermissionArea
+          }
+        });
+        
+        if (!hasPermission) {
+          return NextResponse.json({ 
+            error: "Keine Berechtigung für diesen Download" 
+          }, { status: 403 });
+        }
+      }
+
       // Presigned Download URL generieren
       let url: string;
       

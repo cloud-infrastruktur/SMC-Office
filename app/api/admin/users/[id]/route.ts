@@ -28,7 +28,11 @@ export async function GET(
         name: true,
         email: true,
         role: true,
-        organization: true,
+        organizationRole: true,
+        organizationId: true,
+        organization: {
+          select: { id: true, name: true }
+        },
         notes: true,
         isActive: true,
         lastLogin: true,
@@ -63,7 +67,7 @@ export async function PUT(
 
     const { id } = await params;
     const data = await request.json();
-    const { name, email, password, role, organization, notes, isActive, permissions } = data;
+    const { name, email, password, role, organizationRole, organizationId, notes, isActive, permissions } = data;
 
     // Manager kann keine Admins bearbeiten
     const targetUser = await prisma.user.findUnique({ where: { id } });
@@ -94,18 +98,20 @@ export async function PUT(
       email?: string;
       password?: string;
       role?: 'USER' | 'CONSULTANT' | 'CUSTOMER_REF' | 'MANAGER' | 'ADMIN';
-      organization?: string | null;
+      organizationRole?: string | null;
+      organizationId?: string | null;
       notes?: string | null;
       isActive?: boolean;
     } = {
       name: name || null,
-      organization: organization || null,
+      organizationRole: organizationRole || null,
       notes: notes || null,
     };
 
     if (email) updateData.email = email;
     if (role && isAdmin(userRole)) updateData.role = role; // Nur Admin kann Rolle ändern
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (organizationId !== undefined) updateData.organizationId = organizationId || null;
     
     // Passwort nur wenn angegeben
     if (password && password.length > 0) {
@@ -121,7 +127,11 @@ export async function PUT(
         name: true,
         email: true,
         role: true,
-        organization: true,
+        organizationRole: true,
+        organizationId: true,
+        organization: {
+          select: { id: true, name: true }
+        },
         isActive: true,
       },
     });

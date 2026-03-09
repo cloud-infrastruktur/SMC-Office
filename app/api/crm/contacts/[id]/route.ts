@@ -23,6 +23,8 @@ export async function GET(
       where: { id },
       include: {
         client: true,
+        organization: { select: { id: true, name: true, displayName: true } },
+        user: { select: { id: true, name: true, email: true, role: true } },
         deals: {
           orderBy: { createdAt: "desc" },
           take: 10,
@@ -79,14 +81,38 @@ export async function PUT(
       }
     }
 
+    // UserId-Eindeutigkeit prüfen
+    if (body.userId) {
+      const userLinked = await prisma.crmContact.findFirst({
+        where: { userId: body.userId, NOT: { id } },
+      });
+      if (userLinked) {
+        return NextResponse.json(
+          { error: "Dieser Benutzer ist bereits mit einem anderen Kontakt verknüpft" },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Prepare update data, explicitly handle null values
+    const updateData: Record<string, unknown> = {
+      ...body,
+      email: body.email?.toLowerCase(),
+      updatedAt: new Date(),
+    };
+    
+    // Handle explicit null for organizationId and userId
+    if (body.organizationId === null) updateData.organizationId = null;
+    if (body.userId === null) updateData.userId = null;
+
     const contact = await prisma.crmContact.update({
       where: { id },
-      data: {
-        ...body,
-        email: body.email?.toLowerCase(),
-        updatedAt: new Date(),
+      data: updateData,
+      include: { 
+        client: true,
+        organization: { select: { id: true, name: true, displayName: true } },
+        user: { select: { id: true, name: true, email: true, role: true } },
       },
-      include: { client: true },
     });
 
     return NextResponse.json(contact);

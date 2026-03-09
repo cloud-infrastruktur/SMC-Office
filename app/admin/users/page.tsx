@@ -32,9 +32,9 @@ interface User {
 }
 
 const PERMISSION_AREAS = [
-  { value: 'PROFILE', label: 'Profil', description: 'Zugriff auf Profil-Seite' },
-  { value: 'REFERENCES', label: 'Referenzen', description: 'Zugriff auf Referenzen' },
-  { value: 'TRAININGS', label: 'Trainings', description: 'Zugriff auf Trainings & Zertifikate' },
+  { value: 'PROFILE', label: 'Profil', description: 'Zugriff auf Profil-Downloads' },
+  { value: 'REFERENCES', label: 'Kunden-Referenzen', description: 'Zugriff auf Original-Referenzschreiben' },
+  { value: 'TRAININGS', label: 'Zertifikate & Trainings', description: 'Zugriff auf Zertifikate & Trainings' },
   { value: 'FILES', label: 'Dateien', description: 'Zugriff auf Downloads' },
 ];
 

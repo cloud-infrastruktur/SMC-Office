@@ -28,6 +28,7 @@ export default function DownloadsPage() {
   const [files, setFiles] = useState<DownloadFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+  const [noPermissionMessage, setNoPermissionMessage] = useState<string | null>(null);
   
   // Preview Modal State
   const [previewFile, setPreviewFile] = useState<DownloadFile | null>(null);
@@ -48,6 +49,12 @@ export default function DownloadsPage() {
       if (response.ok) {
         const data = await response.json();
         setFiles(data.files || []);
+        // Prüfen ob eine Berechtigungs-Meldung zurückkommt
+        if (data.message && data.files?.length === 0) {
+          setNoPermissionMessage(data.message);
+        } else {
+          setNoPermissionMessage(null);
+        }
       }
     } catch (error) {
       console.error("Error fetching files:", error);
@@ -148,6 +155,29 @@ export default function DownloadsPage() {
           </p>
         </motion.div>
 
+        {/* Keine Berechtigungen - Warnung anzeigen */}
+        {noPermissionMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 mb-8"
+          >
+            <div className="flex items-start gap-4">
+              <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <div>
+                <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                  Keine Berechtigungen
+                </h3>
+                <p className="text-amber-700 dark:text-amber-400">
+                  {noPermissionMessage}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tabs nur anzeigen wenn Dateien vorhanden */}
+        {files.length > 0 ? (
         <Tabs defaultValue="PROFILE" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm">
             {Object.entries(categoryLabels).map(([key, label]) => (
@@ -248,6 +278,14 @@ export default function DownloadsPage() {
             </TabsContent>
           ))}
         </Tabs>
+        ) : !noPermissionMessage && (
+          <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+            <FolderOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">
+              Noch keine Dateien verfügbar
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Preview Modal */}

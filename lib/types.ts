@@ -100,6 +100,26 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   ADMIN: 'bg-red-100 text-red-800'
 };
 
+// V4.8.9: Rollen-Hierarchie (höher = mehr Berechtigungen)
+// Administrator > Manager > Unternehmensberatung > Kunden-Referenz > Registrierter Benutzer
+export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  USER: 1,           // Registrierter Benutzer
+  CUSTOMER_REF: 2,   // Kunden-Referenz
+  CONSULTANT: 3,     // Unternehmensberatung
+  MANAGER: 4,        // Manager
+  ADMIN: 5           // Administrator
+};
+
+// Prüft ob eine Rolle mindestens so hoch ist wie eine andere
+export function hasRoleLevel(userRole?: string, requiredRole?: UserRole): boolean {
+  const upperRole = (userRole?.toUpperCase() || 'USER') as UserRole;
+  const required = requiredRole || 'USER';
+  return (ROLE_HIERARCHY[upperRole] || 0) >= (ROLE_HIERARCHY[required] || 0);
+}
+
+// Sortierte Liste der Rollen (für Dropdowns etc.)
+export const SORTED_ROLES: UserRole[] = ['USER', 'CUSTOMER_REF', 'CONSULTANT', 'MANAGER', 'ADMIN'];
+
 export type Expense = {
   id: string
   amount: number

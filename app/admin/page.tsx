@@ -22,6 +22,7 @@ import {
   Database,
   AlertTriangle,
   Building,
+  Building2,
   ExternalLink,
   Shield,
   Calculator,
@@ -262,6 +263,13 @@ export default function AdminPage() {
       href: "/admin/users",
       icon: Users,
       color: "from-blue-500 to-blue-600",
+    },
+    {
+      title: "Organisationen",
+      description: "Kunden-Organisationen verwalten, Benutzer & Kontakte zuordnen",
+      href: "/admin/organizations",
+      icon: Building2,
+      color: "from-emerald-500 to-emerald-600",
     },
     {
       title: "Kunden-Anonymisierung",

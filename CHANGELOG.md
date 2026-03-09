@@ -1,5 +1,138 @@
 # Changelog - SMC Office Website
 
+## [V4.8.9] - 09.03.2026 - Enterprise Architecture + CI/CD Optimierung
+
+### 🏢 Enterprise-Architektur
+
+#### Neue Datenbank-Modelle
+| Modell | Beschreibung |
+|--------|-------------|
+| `Organization` | Outlook-kompatible Organisations-Tabelle |
+| `FileFolder.permissionArea` | Bereichs-basierte Download-Berechtigungen |
+| `FileFolder.isDownloadFolder` | Markiert Ordner für Download-Modul |
+| `FileFolder.isProtected` | Löschschutz für System-Ordner |
+
+#### Neue Relationen
+- `User → Organization` (N:1)
+- `CrmContact → User` (1:1)
+- `CrmContact → Organization` (N:1)
+
+#### Neue Admin-Seite
+- `/admin/organizations` - Organisationen-Verwaltung mit CRUD
+
+### 🚀 CI/CD Pipeline Optimierung
+
+#### Problem
+Die Pipeline reagierte nicht auf Git-Tag-Pushes und Release-Erstellung.
+
+#### Lösung - Erweiterte Trigger
+```yaml
+on:
+  push:
+    branches: [main, prod]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'      # v4.8.9
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'    # v4.8.9-beta
+  release:
+    types: [published]
+  workflow_dispatch:                   # Manueller Trigger
+```
+
+#### Dynamisches Docker-Tagging
+```yaml
+# Beispiel-Output für Tag v4.8.9:
+ghcr.io/smc/smc-office:v4.8.9
+ghcr.io/smc/smc-office:4.8.9
+ghcr.io/smc/smc-office:4.8
+ghcr.io/smc/smc-office:latest
+```
+
+#### Version-Erkennung (Priorität)
+1. **Git Tag** → `v4.8.9`
+2. **Release Tag** → `v4.8.9`
+3. **CHANGELOG.md** → `v4.8.9`
+4. **Fallback** → `dev-YYYYMMDD`
+
+### 📄 Migrations-Skripte
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `scripts/migrate-v489-pre.sql` | Sichert organization-Textwerte (VOR Update) |
+| `scripts/migrate-v489-post.sql` | Verknüpft User mit Organizations (NACH Update) |
+| `scripts/migrate-v489-enterprise.ts` | TypeScript-Alternative |
+
+### 📝 Betroffene Dateien
+- `.github/workflows/deploy.yml` (komplett überarbeitet)
+- `DEPLOYMENT.md` (CI/CD-Sektion aktualisiert)
+- `prisma/schema.prisma` (Enterprise-Modelle)
+
+---
+
+## [V4.8.7] - 05.03.2026 - Bug-Fix Zähllogik + GitHub CI/CD
+
+### 🐛 Bug-Fix: Referenz-Kunden Zähllogik
+
+#### Problem
+Die Kachel "Referenz-Kunden" zeigte **18** statt der korrekten Anzahl **13** einzigartiger Kunden.
+
+#### Ursache
+`references.length` zählte alle Projekt-Einträge, nicht die einzigartigen Kunden.
+Ein Kunde mit 3 Projekten wurde 3x gezählt.
+
+#### Lösung
+```typescript
+// Vorher:
+references: references.length  // 18 (Projekte)
+
+// Nachher:
+const uniqueClients = new Set(
+  references.map((r) => r.displayClient || r.client)
+).size;
+references: uniqueClients  // 13 (einzigartige Kunden)
+```
+
+#### Betroffene Dateien
+- `components/hero-section.tsx` (Zeile 50-53)
+- `app/about/page.tsx` (Zeile 57-60)
+
+### ✨ UI-Verbesserung: Labels in Statistik-Kacheln
+
+| Kachel | Vorher | Nachher |
+|--------|--------|---------|
+| Projekterfahrungen | `18` | `18 Projekte` |
+| Referenz-Kunden | `13` | `13 Kunden` |
+
+### 🚀 GitHub CI/CD Pipeline
+
+Neue automatisierte Deployment-Pipeline via GitHub Actions:
+
+#### Neues Architektur-Modell
+| Säule | System | Beschreibung |
+|-------|--------|--------------|
+| Code-Hoheit | **GitHub** | Single Source of Truth |
+| Secret-Hoheit | **Infisical** | Keine .env auf Server |
+| Deployment | **GitHub Actions** | Automatisiert |
+
+#### Workflow-Datei
+`.github/workflows/deploy.yml` mit:
+- **Trigger**: Push auf `main`/`prod`, Release, Manuell
+- **Build**: Docker Image → GitHub Container Registry (ghcr.io)
+- **Deploy**: SSH auf SMCVS01, Infisical injiziert Secrets
+- **Health Check**: Automatische Verifikation nach Deployment
+
+#### GitHub Secrets (zu konfigurieren)
+```
+SSH_USER          # deploy
+SSH_PRIVATE_KEY   # Ed25519 Private Key
+SSH_PORT          # 22 (optional)
+GHCR_TOKEN        # GitHub Container Registry Token
+```
+
+### 📄 Dokumentation aktualisiert
+- `DEPLOYMENT.md` komplett überarbeitet für GitHub-Workflow
+
+---
+
 ## [V4.8.6] - 02.03.2026 - Hotfix: Standalone Build Missing server.js
 
 ### 🔧 Kritischer Build-Blocker behoben
@@ -662,4 +795,3 @@ Nach erfolgreichem Deployment und Test:
 **Checkpoint erstellt**: `Bugfixes Migrationen SMC-DMS SMTP`  
 **Build erfolgreich**: 34 Routen, 0 Fehler  
 **Status**: ✅ BEREIT FÜR DEPLOYMENT
-

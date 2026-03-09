@@ -47,9 +47,14 @@ export function HeroSection() {
         const references = referencesRes.ok ? await referencesRes.json() : [];
         const trainings = trainingsRes.ok ? await trainingsRes.json() : [];
         
+        // Zähle einzigartige Kunden (nicht Projekte) für Referenz-Kunden
+        const uniqueClients = new Set(
+          references.map((r: { displayClient?: string; client?: string }) => r.displayClient || r.client)
+        ).size;
+        
         setStats({
           projects: projects.length,
-          references: references.length,
+          references: uniqueClients,
           years: YEARS_PROJECT_EXPERIENCE,
           certificates: trainings.length || 22,
         });
@@ -125,12 +130,14 @@ export function HeroSection() {
             />
             <LinkStatCard 
               number={`${stats.projects}`} 
+              suffix="Projekte"
               label="Projekterfahrungen" 
               href="/projects" 
               delay={0.4} 
             />
             <LinkStatCard 
               number={`${stats.references}`} 
+              suffix="Kunden"
               label="Referenz-Kunden" 
               href="/references" 
               delay={0.5} 
@@ -154,7 +161,8 @@ function LinkStatCard({
   href, 
   delay, 
   showYears, 
-  years 
+  years,
+  suffix
 }: { 
   number?: string; 
   label: string; 
@@ -162,6 +170,7 @@ function LinkStatCard({
   delay: number;
   showYears?: boolean;
   years?: number;
+  suffix?: string;
 }) {
   return (
     <Link href={href}>
@@ -176,8 +185,11 @@ function LinkStatCard({
             {years}+ Jahre
           </div>
         ) : number ? (
-          <div className="text-2xl sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl 5xl:text-7xl font-bold bg-gradient-to-r from-blue-600 to-blue-600 dark:from-blue-400 dark:to-blue-400 bg-clip-text text-transparent pb-1">
-            {number}
+          <div className="text-2xl sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl 5xl:text-7xl font-bold pb-1">
+            <span className="bg-gradient-to-r from-blue-600 to-blue-600 dark:from-blue-400 dark:to-blue-400 bg-clip-text text-transparent">{number}</span>
+            {suffix && (
+              <span className="text-lg sm:text-xl md:text-2xl 3xl:text-3xl 4xl:text-4xl 5xl:text-5xl ml-2 bg-gradient-to-r from-blue-600 to-blue-600 dark:from-blue-400 dark:to-blue-400 bg-clip-text text-transparent font-semibold">{suffix}</span>
+            )}
           </div>
         ) : null}
         <div className="text-gray-600 dark:text-gray-300 mt-1 md:mt-2 text-xs sm:text-sm 3xl:text-base 4xl:text-lg 5xl:text-xl group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</div>

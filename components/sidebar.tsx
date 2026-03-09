@@ -114,11 +114,13 @@ export function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ forceExpanded = false }: { forceExpanded?: boolean }) => {
+    const showLabels = forceExpanded || !isCollapsed;
+    return (
     <div className="flex flex-col h-full">
       {/* Search Section */}
       <div className="px-2 pt-4 pb-2">
-        {isCollapsed ? (
+        {!showLabels ? (
           <button
             onClick={() => {
               setIsCollapsed(false);
@@ -170,7 +172,7 @@ export function Sidebar() {
               {item.icon}
             </span>
             <AnimatePresence>
-              {!isCollapsed && (
+              {showLabels && (
                 <motion.span
                   initial={{ opacity: 0, width: 0 }}
                   animate={{ opacity: 1, width: "auto" }}
@@ -190,9 +192,9 @@ export function Sidebar() {
         {/* Font Size Controls */}
         <div className={cn(
           "flex items-center gap-2 px-3 mx-2",
-          isCollapsed ? "justify-center" : "justify-between"
+          !showLabels ? "justify-center" : "justify-between"
         )}>
-          {!isCollapsed && (
+          {showLabels && (
             <span className="text-xs text-gray-500 dark:text-gray-400">Schriftgröße</span>
           )}
           <div className="flex items-center gap-1">
@@ -203,7 +205,7 @@ export function Sidebar() {
             >
               <Minus className="w-4 h-4" />
             </button>
-            {!isCollapsed && (
+            {showLabels && (
               <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-center">
                 {fontSize}%
               </span>
@@ -236,7 +238,7 @@ export function Sidebar() {
                 )}
               </span>
               <AnimatePresence>
-                {!isCollapsed && (
+                {showLabels && (
                   <motion.span
                     initial={{ opacity: 0, width: 0 }}
                     animate={{ opacity: 1, width: "auto" }}
@@ -264,7 +266,7 @@ export function Sidebar() {
               <LogOut className="w-5 h-5" />
             </span>
             <AnimatePresence>
-              {!isCollapsed && (
+              {showLabels && (
                 <motion.span
                   initial={{ opacity: 0, width: 0 }}
                   animate={{ opacity: 1, width: "auto" }}
@@ -288,7 +290,7 @@ export function Sidebar() {
               <LogIn className="w-5 h-5" />
             </span>
             <AnimatePresence>
-              {!isCollapsed && (
+              {showLabels && (
                 <motion.span
                   initial={{ opacity: 0, width: 0 }}
                   animate={{ opacity: 1, width: "auto" }}
@@ -304,6 +306,7 @@ export function Sidebar() {
       </div>
     </div>
   );
+  };
 
   return (
     <>
@@ -339,7 +342,7 @@ export function Sidebar() {
             className="fixed top-0 left-0 h-full w-64 z-50 lg:hidden"
           >
             <div className="h-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-slate-700/50 shadow-2xl pt-16">
-              <SidebarContent />
+              <SidebarContent forceExpanded={true} />
             </div>
           </motion.aside>
         )}

@@ -2,6 +2,17 @@
 # SMC-Office - Production Docker Compose V4.8.4
 # Infisical Secret Management | Isolierte Produktions-Container
 # ==============================================================================
+#
+# Container-Hostnamen (für Umgebungsvariablen):
+#   - smc-office-prod      (App)
+#   - smc-postgres-prod    (DATABASE_URL)
+#   - smc-minio-prod       (S3_ENDPOINT)
+#
+# Start:
+#   export INFISICAL_TOKEN="st.xxx..."
+#   docker compose -f docker-compose.production.yml up -d
+#
+# ==============================================================================
 
 version: '3.8'
 
@@ -19,26 +30,19 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - MINIO_ROOT_USER=${S3_ACCESS_KEY}
-      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_URL=${S3_PUBLIC_URL}
-      - NEXT_PUBLIC_S3_ENDPOINT=${NEXT_PUBLIC_S3_ENDPOINT}
       # Infisical Configuration
       - INFISICAL_TOKEN=${INFISICAL_TOKEN}
-      - INFISICAL_PROJECT_ID=2e7b3ad9-645b-4a56-a472-7b080cc1a4b8
-      - INFISICAL_ENVIRONMENT=production
-      - INFISICAL_API_URL=http://85.215.165.187:8081
+      - INFISICAL_PROJECT_ID=${INFISICAL_PROJECT_ID:-smc-office}
+      - INFISICAL_ENVIRONMENT=${INFISICAL_ENVIRONMENT:-production}
     volumes:
       - uploads:/app/uploads
-      - next_cache:/app/.next/cache
     depends_on:
       smc-postgres-prod:
         condition: service_healthy
       smc-minio-init-prod:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -55,11 +59,6 @@ services:
     hostname: smc-postgres-prod
     restart: unless-stopped
     environment:
-      - MINIO_ROOT_USER=${S3_ACCESS_KEY}
-      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_URL=${S3_PUBLIC_URL}
-      - NEXT_PUBLIC_S3_ENDPOINT=${NEXT_PUBLIC_S3_ENDPOINT}
       - POSTGRES_USER=${POSTGRES_USER:-smc_user}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB:-smc_office_prod}
@@ -83,11 +82,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=${S3_ACCESS_KEY}
-      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_URL=${S3_PUBLIC_URL}
-      - NEXT_PUBLIC_S3_ENDPOINT=${NEXT_PUBLIC_S3_ENDPOINT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
     ports:
@@ -112,16 +108,14 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
+      mc alias set myminio http://smc-minio-prod:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD};
       mc mb --ignore-existing myminio/$${S3_BUCKET_NAME:-smc-uploads};
       mc anonymous set download myminio/$${S3_BUCKET_NAME:-smc-uploads}/public;
       echo 'Bucket initialization complete';
       "
     environment:
-      - MINIO_ROOT_USER=${S3_ACCESS_KEY}
-      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_URL=${S3_PUBLIC_URL}
-      - NEXT_PUBLIC_S3_ENDPOINT=${NEXT_PUBLIC_S3_ENDPOINT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME:-smc-uploads}
     networks:
       - smc-network
@@ -130,7 +124,6 @@ volumes:
   uploads:
   pg_data:
   minio_data:
-  next_cache:
 
 networks:
   smc-network:

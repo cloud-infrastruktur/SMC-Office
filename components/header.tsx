@@ -158,9 +158,9 @@ export function Header() {
     >
       <div className="max-w-[2000px] mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-16 sm:h-20 lg:h-24 gap-1 sm:gap-2">
-          {/* Logo - Größe angepasst wie im Footer */}
-          <Link href="/" className="flex items-center flex-shrink-0">
-            <div className="relative w-32 h-10 sm:w-36 sm:h-11 lg:w-40 lg:h-12 xl:w-48 xl:h-14 3xl:w-56 3xl:h-16 4xl:w-64 4xl:h-18">
+          {/* Logo - responsive Größen mit Abstand zum Hamburger-Menü */}
+          <Link href="/" className="flex items-center flex-shrink-0 mr-2 sm:mr-4">
+            <div className="relative w-24 h-8 sm:w-32 sm:h-10 md:w-36 md:h-11 lg:w-40 lg:h-12 xl:w-48 xl:h-14">
               {mounted && (
                 <Image
                   src={resolvedTheme === "dark" ? "/smc-logo-white.png" : "/smc-logo.png"}
@@ -309,37 +309,20 @@ export function Header() {
           </div>
 
           {/* Mobile: kompakte Toolbar + Menü-Button */}
-          <div className="flex md:hidden items-center gap-1">
-            {/* Mobile Suche */}
+          <div className="flex md:hidden items-center gap-0.5 sm:gap-1 ml-auto">
+            {/* Mobile Suche - nur auf größeren Mobiles */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+              className="hidden xs:flex p-1.5 sm:p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
-            {/* Mobile Theme Toggle (schneller Wechsel) */}
-            {mounted && (
-              <button
-                onClick={() => {
-                  const themeOrder = ['light', 'dark', 'system'];
-                  const currentIndex = themeOrder.indexOf(theme || 'system');
-                  const nextIndex = (currentIndex + 1) % themeOrder.length;
-                  setTheme(themeOrder[nextIndex]);
-                }}
-                className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
-                title={`Aktuell: ${theme === 'light' ? 'Hell' : theme === 'dark' ? 'Dunkel' : 'System'}`}
-              >
-                {theme === 'light' && <Sun className="w-5 h-5 text-amber-500" />}
-                {theme === 'dark' && <Moon className="w-5 h-5 text-indigo-400" />}
-                {theme === 'system' && <Monitor className="w-5 h-5" />}
-              </button>
-            )}
-
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - prominent */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+              className="p-2 sm:p-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all"
+              aria-label="Menü öffnen"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>

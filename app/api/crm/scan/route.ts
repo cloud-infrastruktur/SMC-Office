@@ -101,6 +101,11 @@ export async function POST(request: NextRequest) {
       ? keywordConfig.keywords
       : keywordConfig.keywords.map((k) => k.toLowerCase());
 
+    // Negative Keywords für Matching vorbereiten
+    const negativeKeywords = keywordConfig.caseSensitive
+      ? (keywordConfig.negativeKeywords || [])
+      : (keywordConfig.negativeKeywords || []).map((k) => k.toLowerCase());
+
     const blacklistEmails = keywordConfig.blacklistEmails.map((e) => e.toLowerCase());
     const blacklistDomains = keywordConfig.blacklistDomains.map((d) => d.toLowerCase());
 
@@ -139,6 +144,16 @@ export async function POST(request: NextRequest) {
       );
 
       if (matchedKeywords.length === 0) {
+        continue;
+      }
+
+      // Negative Keywords prüfen - wenn ein negatives Keyword gefunden wird, überspringe diese E-Mail
+      const matchedNegativeKeywords = negativeKeywords.filter((keyword) =>
+        textToSearch.includes(keywordConfig.caseSensitive ? keyword : keyword.toLowerCase())
+      );
+
+      if (matchedNegativeKeywords.length > 0) {
+        results.skipped++;
         continue;
       }
 

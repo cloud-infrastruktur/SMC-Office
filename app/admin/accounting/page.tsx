@@ -422,29 +422,29 @@ export default function SevdeskSyncPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-800 py-8">
       <div className="container-adaptive px-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Link href="/admin">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-slate-700">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                <Calculator className="h-8 w-8 text-green-400" />
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white flex items-center gap-3">
+                <Calculator className="h-8 w-8 text-green-600 dark:text-green-400" />
                 Buchhaltung - SevDesk Sync
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Dokumente aus SMC-DMS nach SevDesk exportieren
               </p>
             </div>
@@ -452,7 +452,7 @@ export default function SevdeskSyncPage() {
           <Button
             variant="outline"
             onClick={() => setShowConfig(!showConfig)}
-            className="border-slate-600"
+            className="border-gray-300 dark:border-slate-600"
           >
             <Settings className="h-4 w-4 mr-2" />
             Konfiguration
@@ -464,21 +464,25 @@ export default function SevdeskSyncPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`p-4 rounded-xl border max-w-md ${
+            className={`p-4 rounded-xl border max-w-md bg-white dark:bg-slate-800 shadow-sm ${
               isConnected
-                ? 'bg-green-500/10 border-green-500/30'
-                : 'bg-red-500/10 border-red-500/30'
+                ? 'border-green-200 dark:border-green-500/30'
+                : 'border-red-200 dark:border-red-500/30'
             }`}
           >
             <div className="flex items-center gap-3">
               {isConnected ? (
-                <CheckCircle2 className="h-6 w-6 text-green-400" />
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-500/20">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
               ) : (
-                <XCircle className="h-6 w-6 text-red-400" />
+                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-500/20">
+                  <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
               )}
               <div>
-                <p className="font-medium text-white">SevDesk Status</p>
-                <p className="text-sm text-slate-400">
+                <p className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">SevDesk Status</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {isConnected ? 'Verbunden' : isConfigured ? 'Nicht verbunden' : 'Nicht konfiguriert'}
                 </p>
               </div>
@@ -495,11 +499,11 @@ export default function SevdeskSyncPage() {
               exit={{ opacity: 0, height: 0 }}
               className="mb-8 overflow-hidden"
             >
-              <div className="p-6 rounded-xl bg-slate-800/50 border border-slate-700">
-                <h3 className="text-lg font-semibold text-white mb-4">SevDesk Konfiguration</h3>
+              <div className="p-6 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-4">SevDesk Konfiguration</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       API Token
                     </label>
                     <Input
@@ -507,21 +511,21 @@ export default function SevdeskSyncPage() {
                       value={apiToken}
                       onChange={e => setApiToken(e.target.value)}
                       placeholder="Ihr SevDesk API Token"
-                      className="bg-slate-900/50 border-slate-600"
+                      className="bg-gray-50 dark:bg-slate-900/50 border-gray-300 dark:border-slate-600"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                       Finden Sie Ihren Token unter: SevDesk {'>'} Einstellungen {'>'} Benutzerverwaltung {'>'} API-Token
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Parent Folder ID (Steuervorbereitung)
                     </label>
                     <Input
                       value={parentFolderId}
                       onChange={e => setParentFolderId(e.target.value)}
                       placeholder="22128948"
-                      className="bg-slate-900/50 border-slate-600"
+                      className="bg-gray-50 dark:bg-slate-900/50 border-gray-300 dark:border-slate-600"
                     />
                   </div>
                   <Button onClick={saveConfig} disabled={configLoading}>
@@ -543,28 +547,28 @@ export default function SevdeskSyncPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-6 rounded-xl bg-slate-800/50 border border-slate-700"
+              className="p-6 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm"
             >
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Search className="h-5 w-5 text-purple-400" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Search className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 Quell-Auswahl (DMS-Dokumente)
               </h3>
               
               {/* Free Text Search */}
               <div className="mb-4">
-                <label className="block text-sm text-slate-400 mb-2">Freie Suche (Dokumenteninhalt, Titel)</label>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">Freie Suche (Dokumenteninhalt, Titel)</label>
                 <Input
                   value={freeTextSearch}
                   onChange={e => setFreeTextSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && searchDocuments()}
                   placeholder="Suchbegriff eingeben..."
-                  className="bg-slate-900/50 border-slate-600"
+                  className="bg-gray-50 dark:bg-slate-900/50 border-gray-300 dark:border-slate-600"
                 />
               </div>
 
               {/* Tag Filter Section */}
               <div className="mb-4">
-                <label className="block text-sm text-slate-400 mb-2">
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
                   <span className="flex items-center gap-2">
                     <Tag className="h-4 w-4" />
                     Nach Tags filtern (optional)
@@ -577,7 +581,7 @@ export default function SevdeskSyncPage() {
                     {selectedTags.map(tag => (
                       <span
                         key={tag.id}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30"
                       >
                         <Tag className="h-3 w-3" />
                         {tag.name}
@@ -604,12 +608,12 @@ export default function SevdeskSyncPage() {
                         }}
                         onFocus={() => setShowTagDropdown(true)}
                         placeholder="Tag suchen oder auswählen..."
-                        className="bg-slate-900/50 border-slate-600"
+                        className="bg-gray-50 dark:bg-slate-900/50 border-gray-300 dark:border-slate-600"
                       />
                       <button
                         type="button"
                         onClick={() => setShowTagDropdown(!showTagDropdown)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-white"
                       >
                         <ChevronDown className={`h-4 w-4 transition-transform ${showTagDropdown ? 'rotate-180' : ''}`} />
                       </button>
@@ -626,10 +630,10 @@ export default function SevdeskSyncPage() {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="absolute z-50 w-full mt-2 max-h-64 overflow-y-auto rounded-lg bg-slate-900 border border-slate-700 shadow-xl"
+                      className="absolute z-50 w-full mt-2 max-h-64 overflow-y-auto rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-xl"
                     >
                       {filteredTags.length === 0 ? (
-                        <div className="p-4 text-center text-slate-400">
+                        <div className="p-4 text-center text-gray-600 dark:text-gray-400">
                           {tagsLoading ? 'Lade Tags...' : 'Keine Tags gefunden'}
                         </div>
                       ) : (
@@ -637,12 +641,12 @@ export default function SevdeskSyncPage() {
                           <button
                             key={tag.id}
                             onClick={() => addTag(tag)}
-                            className="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                            className="w-full px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
                           >
-                            <Tag className="h-4 w-4 text-purple-400" />
-                            <span className="text-white">{tag.name}</span>
+                            <Tag className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <span className="text-gray-900 dark:text-white">{tag.name}</span>
                             {tag.document_count !== undefined && (
-                              <span className="ml-auto text-xs text-slate-500">
+                              <span className="ml-auto text-xs text-gray-500 dark:text-gray-500">
                                 {tag.document_count} Dok.
                               </span>
                             )}
@@ -667,7 +671,7 @@ export default function SevdeskSyncPage() {
                 </Button>
               </div>
 
-              <p className="text-xs text-slate-500 mt-3">
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-3">
                 Geben Sie einen Suchbegriff ein und/oder wählen Sie Tags aus, um Dokumente zu finden.
               </p>
             </motion.div>
@@ -677,10 +681,10 @@ export default function SevdeskSyncPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-xl bg-slate-800/50 border border-slate-700"
+                className="p-6 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <FileText className="h-5 w-5 text-blue-400" />
                     Gefundene Dokumente ({documents.length})
                   </h3>
@@ -715,11 +719,11 @@ export default function SevdeskSyncPage() {
                         ) : selectedDocs.has(doc.id) ? (
                           <CheckSquare className="h-5 w-5 text-blue-400 flex-shrink-0" />
                         ) : (
-                          <Square className="h-5 w-5 text-slate-500 flex-shrink-0" />
+                          <Square className="h-5 w-5 text-gray-500 dark:text-gray-500 flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-white truncate">{doc.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">{doc.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                             {doc.correspondent && <span>{doc.correspondent}</span>}
                             {doc.documentType && <span>• {doc.documentType}</span>}
                             {doc.createdDate && (
@@ -740,7 +744,7 @@ export default function SevdeskSyncPage() {
 
                 {/* Selected count */}
                 <div className="mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
-                  <p className="text-slate-400">
+                  <p className="text-gray-600 dark:text-gray-400">
                     {selectedDocs.size} von {documents.filter(d => !d.sevdeskId).length} nicht-exportierten ausgewählt
                   </p>
                 </div>
@@ -752,9 +756,9 @@ export default function SevdeskSyncPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-xl bg-slate-800/50 border border-slate-700"
+                className="p-6 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm"
               >
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <FolderOpen className="h-5 w-5 text-yellow-400" />
                   Ziel-Auswahl (SevDesk-Ordner)
                 </h3>
@@ -771,13 +775,13 @@ export default function SevdeskSyncPage() {
                 {/* Folder Dropdown */}
                 <div className="flex gap-4 items-end">
                   <div className="flex-1 relative" ref={folderDropdownRef}>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Ordner auswählen
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowFolderDropdown(!showFolderDropdown)}
-                      className="w-full p-2.5 rounded-lg bg-slate-900/50 border border-slate-600 text-white text-left flex items-center justify-between"
+                      className="w-full p-2.5 rounded-lg bg-slate-900/50 border border-slate-600 text-gray-900 dark:text-white text-left flex items-center justify-between"
                     >
                       <span className="truncate">
                         {selectedFolderName}
@@ -792,7 +796,7 @@ export default function SevdeskSyncPage() {
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute z-50 w-full mt-2 rounded-lg bg-slate-900 border border-slate-700 shadow-xl"
+                          className="absolute z-50 w-full mt-2 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-xl"
                         >
                           <div className="p-2 border-b border-slate-700">
                             <Input
@@ -804,7 +808,7 @@ export default function SevdeskSyncPage() {
                           </div>
                           <div className="max-h-48 overflow-y-auto">
                             {filteredFolders.length === 0 ? (
-                              <div className="p-4 text-center text-slate-400">
+                              <div className="p-4 text-center text-gray-600 dark:text-gray-400">
                                 Keine Ordner gefunden
                               </div>
                             ) : (
@@ -816,12 +820,12 @@ export default function SevdeskSyncPage() {
                                     setShowFolderDropdown(false);
                                     setFolderSearchQuery('');
                                   }}
-                                  className={`w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 transition-colors ${
+                                  className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors ${
                                     selectedFolder === folder.id ? 'bg-slate-800' : ''
                                   }`}
                                 >
                                   <FolderOpen className="h-4 w-4 text-yellow-400" />
-                                  <span className="text-white">{folder.name}</span>
+                                  <span className="text-gray-900 dark:text-white">{folder.name}</span>
                                   {suggestedFolder?.id === folder.id && (
                                     <span className="ml-auto text-xs text-green-400">✓ Empfohlen</span>
                                   )}
@@ -902,9 +906,9 @@ export default function SevdeskSyncPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-xl bg-slate-800/50 border border-slate-700"
+                className="p-6 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm"
               >
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-400" />
                   Export-Ergebnis
                 </h3>
@@ -942,7 +946,7 @@ export default function SevdeskSyncPage() {
                       ) : (
                         <XCircle className="h-5 w-5 text-red-400" />
                       )}
-                      <span className="flex-1 text-white">{result.title}</span>
+                      <span className="flex-1 text-gray-900 dark:text-white">{result.title}</span>
                       <span className={`text-sm ${
                         result.success
                           ? result.skipped
@@ -967,13 +971,13 @@ export default function SevdeskSyncPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-8 rounded-xl bg-slate-800/50 border border-slate-700 text-center"
+            className="p-8 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm text-center"
           >
             <AlertCircle className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               SevDesk nicht konfiguriert
             </h3>
-            <p className="text-slate-400 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               Bitte konfigurieren Sie zuerst Ihre SevDesk-Verbindung.
             </p>
             <Button onClick={() => setShowConfig(true)}>

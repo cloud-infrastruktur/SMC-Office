@@ -64,6 +64,30 @@ yarn prisma migrate deploy 2>&1 || {
 }
 
 # ============================================================================
+# 5b. V4.8.9 Enterprise Migration (Post-Migration)
+# ============================================================================
+# Prüft ob _V489_UserOrgMapping Tabelle existiert (Pre-Migration wurde ausgeführt)
+# und führt dann automatisch die Post-Migration durch
+V489_MAPPING_EXISTS=$(node -e "
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+  prisma.\$queryRaw\`SELECT 1 FROM information_schema.tables WHERE table_name = '_V489_UserOrgMapping'\`
+    .then(r => { console.log(r.length > 0 ? '1' : '0'); prisma.\$disconnect(); })
+    .catch(() => { console.log('0'); prisma.\$disconnect(); });
+" 2>/dev/null || echo "0")
+
+if [ "$V489_MAPPING_EXISTS" = "1" ]; then
+  echo "⚠ V4.8.9 Pre-Migration detected - Running post-migration..."
+  if [ -f "/app/scripts/migrate-v489-enterprise.js" ]; then
+    node /app/scripts/migrate-v489-enterprise.js 2>&1 || echo "Warning: V4.8.9 migration had issues"
+    echo "✓ V4.8.9 Enterprise Migration completed"
+  elif [ -f "/app/scripts/migrate-v489-post.sql" ]; then
+    # Fallback: SQL direkt ausführen (benötigt psql)
+    echo "Note: Run migrate-v489-post.sql manually if migration incomplete"
+  fi
+fi
+
+# ============================================================================
 # 6. AUTO-SEED: Check if database is empty and seed if needed
 # ============================================================================
 echo "Checking database initialization status..."

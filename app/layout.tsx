@@ -47,7 +47,7 @@ export default function RootLayout({
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col lg:ml-16 transition-all duration-300">
               <Header />
-              <main className="flex-1 pt-16 relative z-0">
+              <main className="flex-1 pt-16 sm:pt-20 lg:pt-24 relative z-0">
                 {children}
               </main>
               <Footer />

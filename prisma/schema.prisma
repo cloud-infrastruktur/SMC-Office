@@ -1,6 +1,7 @@
 generator client {
     provider = "prisma-client-js"
     binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/smc_website/nextjs_space/node_modules/.prisma/client"
 }
 
 datasource db {
@@ -44,10 +45,18 @@ model User {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   role          UserRole         @default(USER)
-  organization  String?
   notes         String?
   isActive      Boolean          @default(true)
   lastLogin     DateTime?
+  
+  // V4.8.9: Organization-Verknüpfung
+  organizationId   String?
+  organizationRole String?        // Position in der Organisation
+  organization     Organization?  @relation("UserOrganization", fields: [organizationId], references: [id])
+  
+  // V4.8.9: CRM-Contact Verknüpfung (Contact = User)
+  crmContact       CrmContact?    @relation("UserCrmContact")
+  
   accounts      Account[]
   crmActivities CrmActivity[]
   assignedDeals CrmDeal[]
@@ -63,6 +72,8 @@ model User {
   // V4.4: Projekt-Management
   managedProjects  CrmProject[]       @relation("ProjectManager")
   projectMembers   CrmProjectMember[]
+  
+  @@index([organizationId])
 }
 
 model VerificationToken {
@@ -86,6 +97,34 @@ model Client {
   projects       Project[]
   references     Reference[]
 
+  @@index([industry])
+}
+
+// V4.8.9: Organization Model (Outlook-Style)
+model Organization {
+  id             String       @id @default(cuid())
+  name           String       @unique
+  displayName    String?
+  industry       String?
+  website        String?
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  postalCode     String?
+  country        String?      @default("Deutschland")
+  description    String?
+  logoUrl        String?
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Relationen
+  contacts       CrmContact[]
+  users          User[]       @relation("UserOrganization")
+  
+  @@index([name])
   @@index([industry])
 }
 
@@ -297,11 +336,17 @@ model ManagedFile {
 }
 
 model FileFolder {
-  id        String        @id @default(cuid())
-  name      String
-  slug      String        @unique
-  parentId  String?
-  sortOrder Int           @default(0)
+  id               String          @id @default(cuid())
+  name             String
+  slug             String          @unique
+  parentId         String?
+  sortOrder        Int             @default(0)
+  
+  // V4.8.9: Berechtigungskonzept
+  isProtected      Boolean         @default(false)  // Kann nicht gelöscht werden
+  isDownloadFolder Boolean         @default(false)  // Erscheint im Download-Modul
+  permissionArea   PermissionArea? // Berechtigungsbereich (null = FILES)
+  
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   parent    FileFolder?   @relation("FolderHierarchy", fields: [parentId], references: [id])
@@ -309,6 +354,8 @@ model FileFolder {
   files     ManagedFile[]
 
   @@index([parentId])
+  @@index([permissionArea])
+  @@index([isDownloadFolder])
 }
 
 model FileAttachment {
@@ -726,6 +773,15 @@ model CrmContact {
   clientId    String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  
+  // V4.8.9: User-Verknüpfung (Contact = User)
+  userId         String?       @unique
+  user           User?         @relation("UserCrmContact", fields: [userId], references: [id], onDelete: SetNull)
+  
+  // V4.8.9: Organization-Verknüpfung
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  
   activities  CrmActivity[]
   client      Client?       @relation(fields: [clientId], references: [id])
   deals       CrmDeal[]
@@ -736,6 +792,8 @@ model CrmContact {
   @@index([company])
   @@index([email])
   @@index([lastName])
+  @@index([userId])
+  @@index([organizationId])
 }
 
 model CrmDeal {
@@ -817,6 +875,7 @@ model CrmKeywordConfig {
   id               String    @id @default(cuid())
   name             String
   keywords         String[]
+  negativeKeywords String[]  // Negative Keywords - blockieren Deal-Erstellung
   blacklistEmails  String[]
   blacklistDomains String[]
   autoAssignRules  Json?

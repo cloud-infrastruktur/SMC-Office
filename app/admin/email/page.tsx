@@ -1922,12 +1922,21 @@ function AccountModal({
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Passwort</label>
-                <Input
-                  type={showPasswords ? 'text' : 'password'}
-                  value={formData.smtpPassword}
-                  onChange={(e) => setFormData({ ...formData, smtpPassword: e.target.value })}
-                  placeholder={account ? '(unverändert)' : ''}
-                />
+                <div className="relative">
+                  <Input
+                    type={showPasswords ? 'text' : 'password'}
+                    value={formData.smtpPassword}
+                    onChange={(e) => setFormData({ ...formData, smtpPassword: e.target.value })}
+                    placeholder={account ? '(unverändert)' : ''}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(!showPasswords)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
+                  >
+                    {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

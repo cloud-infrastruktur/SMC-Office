@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
         data: {
           name: "Standard",
           keywords: DEFAULT_KEYWORDS,
+          negativeKeywords: [],
           blacklistEmails: [],
           blacklistDomains: ["newsletter@", "noreply@", "no-reply@", "mailer-daemon@"],
           checkSubject: true,
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
       id,
       name,
       keywords,
+      negativeKeywords,
       blacklistEmails,
       blacklistDomains,
       autoAssignRules,
@@ -95,6 +97,7 @@ export async function POST(request: NextRequest) {
         data: {
           name,
           keywords: keywords || [],
+          negativeKeywords: negativeKeywords || [],
           blacklistEmails: blacklistEmails || [],
           blacklistDomains: blacklistDomains || [],
           autoAssignRules,
@@ -112,6 +115,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: name || "Neue Konfiguration",
           keywords: keywords || DEFAULT_KEYWORDS,
+          negativeKeywords: negativeKeywords || [],
           blacklistEmails: blacklistEmails || [],
           blacklistDomains: blacklistDomains || ["newsletter@", "noreply@"],
           autoAssignRules,

@@ -614,6 +614,177 @@ export async function syncFolders(accountId: string): Promise<{ success: boolean
 }
 
 /**
+ * Synchronisiert E-Mails vom IMAP-Server in die Datenbank
+ * Dies ist notwendig für den CRM-Scan
+ */
+export async function syncEmailsToDatabase(
+  accountId: string,
+  options: { daysBack?: number; limit?: number; folderPath?: string } = {}
+): Promise<{ success: boolean; synced: number; error?: string }> {
+  const { daysBack = 14, limit = 200, folderPath = 'INBOX' } = options;
+  
+  try {
+    const account = await prisma.emailAccount.findUnique({
+      where: { id: accountId },
+      include: { folders: true }
+    });
+    
+    if (!account) {
+      return { success: false, synced: 0, error: 'Konto nicht gefunden' };
+    }
+    
+    // Finde den Folder in der DB
+    const folder = account.folders.find(f => f.path === folderPath || f.type === 'inbox');
+    if (!folder) {
+      return { success: false, synced: 0, error: 'INBOX Ordner nicht gefunden' };
+    }
+    
+    const config: EmailAccountConfig = {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      imapHost: account.imapHost,
+      imapPort: account.imapPort,
+      imapSecure: account.imapSecure,
+      imapUser: account.imapUser,
+      imapPassword: account.imapPassword,
+      smtpHost: account.smtpHost,
+      smtpPort: account.smtpPort,
+      smtpSecure: account.smtpSecure,
+      smtpUser: account.smtpUser,
+      smtpPassword: account.smtpPassword,
+    };
+    
+    const client = createImapClient(config);
+    let syncedCount = 0;
+    
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock(folder.path);
+      
+      try {
+        // Suche E-Mails der letzten X Tage
+        const sinceDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+        const searchQuery = { since: sinceDate };
+        
+        // Hole UIDs
+        const uids: number[] = [];
+        for await (const msg of client.fetch(searchQuery, { uid: true })) {
+          uids.push(msg.uid);
+        }
+        
+        // Begrenzen auf limit
+        const uidsToSync = uids.slice(-limit);
+        
+        // Prüfe welche UIDs bereits in der DB sind
+        const existingMessages = await prisma.emailMessage.findMany({
+          where: {
+            accountId: account.id,
+            folderId: folder.id,
+            uid: { in: uidsToSync }
+          },
+          select: { uid: true }
+        });
+        const existingUids = new Set(existingMessages.map(m => m.uid));
+        
+        // Filtere neue UIDs
+        const newUids = uidsToSync.filter(uid => !existingUids.has(uid));
+        
+        if (newUids.length === 0) {
+          return { success: true, synced: 0 };
+        }
+        
+        // Hole und speichere neue E-Mails
+        for (const uid of newUids) {
+          try {
+            // Hole Envelope und Body
+            let msgData: any = null;
+            for await (const msg of client.fetch(uid.toString(), {
+              uid: true,
+              envelope: true,
+              flags: true,
+              bodyStructure: true,
+            }, { uid: true })) {
+              msgData = msg;
+            }
+            
+            if (!msgData || !msgData.envelope) continue;
+            
+            const env = msgData.envelope;
+            
+            // Hole Text-Body für CRM-Scan
+            let textBody: string | null = null;
+            try {
+              const source = await client.download(uid.toString(), undefined, { uid: true });
+              if (source && source.content) {
+                const chunks: Buffer[] = [];
+                for await (const chunk of source.content) {
+                  chunks.push(chunk);
+                }
+                const buffer = Buffer.concat(chunks);
+                const parsed = await simpleParser(buffer);
+                textBody = parsed.text || null;
+              }
+            } catch (e) {
+              // Ignoriere Fehler beim Body-Abruf
+            }
+            
+            // Extrahiere Adressen
+            const fromAddr = env.from?.[0];
+            const toAddrs = env.to || [];
+            const ccAddrs = env.cc || [];
+            
+            // Speichere in DB
+            await prisma.emailMessage.create({
+              data: {
+                accountId: account.id,
+                folderId: folder.id,
+                uid: uid,
+                messageId: env.messageId || null,
+                subject: env.subject || '(Kein Betreff)',
+                fromAddress: fromAddr?.address || '',
+                fromName: fromAddr?.name || null,
+                toAddresses: toAddrs.map((a: any) => a.address || '').filter(Boolean),
+                ccAddresses: ccAddrs.map((a: any) => a.address || '').filter(Boolean),
+                textBody: textBody,
+                snippet: textBody?.substring(0, 200) || null,
+                isRead: msgData.flags?.has('\\Seen') || false,
+                isStarred: msgData.flags?.has('\\Flagged') || false,
+                receivedAt: env.date || new Date(),
+                inReplyTo: env.inReplyTo || null,
+              }
+            });
+            
+            syncedCount++;
+          } catch (e) {
+            console.error(`[EmailSync] Error syncing UID ${uid}:`, e);
+            // Fahre mit der nächsten E-Mail fort
+          }
+        }
+      } finally {
+        lock.release();
+      }
+      
+      await client.logout();
+    } catch (e) {
+      console.error('[EmailSync] IMAP Error:', e);
+      throw e;
+    }
+    
+    // Update lastSync
+    await prisma.emailAccount.update({
+      where: { id: accountId },
+      data: { lastSync: new Date(), syncError: null }
+    });
+    
+    return { success: true, synced: syncedCount };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'E-Mail-Sync fehlgeschlagen';
+    return { success: false, synced: 0, error: errorMsg };
+  }
+}
+
+/**
  * Erstellt ein Zitat für Antworten/Weiterleitungen
  */
 export function createQuote(

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/db';
-import { testImapConnection, testSmtpConnection, syncFolders } from '@/lib/email-client';
+import { testImapConnection, testSmtpConnection, syncFolders, syncEmailsToDatabase } from '@/lib/email-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -252,9 +252,24 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     }
 
-    // Default: Synchronisation
-    const result = await syncFolders(id);
-    return NextResponse.json(result);
+    // Default: Synchronisation (Ordner + E-Mails für CRM)
+    const foldersResult = await syncFolders(id);
+    
+    if (!foldersResult.success) {
+      return NextResponse.json(foldersResult);
+    }
+    
+    // Synchronisiere auch E-Mails für CRM-Scan
+    const emailsResult = await syncEmailsToDatabase(id, {
+      daysBack: 14,
+      limit: 200
+    });
+    
+    return NextResponse.json({
+      success: true,
+      foldersSync: foldersResult,
+      emailsSync: emailsResult
+    });
   } catch (error) {
     console.error('[EmailAccount] POST Error:', error);
     return NextResponse.json(

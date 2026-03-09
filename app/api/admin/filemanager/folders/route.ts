@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import { isAdminOrManager } from "@/lib/auth";
+import { PermissionArea } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Neuen Ordner erstellen
+// POST - Neuen Ordner erstellen (mit Berechtigungskonzept)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -44,13 +45,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, parentId } = body;
+    const { 
+      name, 
+      parentId,
+      // V4.8.9: Neue Felder für Berechtigungskonzept
+      isProtected = false,
+      isDownloadFolder = false,
+      permissionArea = null
+    } = body;
 
     if (!name) {
       return NextResponse.json(
         { error: "Name ist erforderlich" },
         { status: 400 }
       );
+    }
+
+    // Validieren von permissionArea wenn angegeben
+    if (permissionArea !== null) {
+      const validAreas = Object.values(PermissionArea);
+      if (!validAreas.includes(permissionArea)) {
+        return NextResponse.json(
+          { error: `Ungültige permissionArea. Erlaubt: ${validAreas.join(', ')}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Slug generieren
@@ -73,6 +92,10 @@ export async function POST(request: NextRequest) {
         slug: `${slug}-${Date.now()}`,
         parentId: parentId || null,
         sortOrder: (maxSort._max.sortOrder || 0) + 1,
+        // V4.8.9: Berechtigungsfelder
+        isProtected,
+        isDownloadFolder,
+        permissionArea,
       },
     });
 

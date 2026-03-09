@@ -24,13 +24,20 @@ export async function GET() {
         name: true,
         email: true,
         role: true,
-        organization: true,
+        organizationId: true,
+        organizationRole: true,
+        organization: {
+          select: { id: true, name: true, displayName: true }
+        },
         notes: true,
         isActive: true,
         lastLogin: true,
         createdAt: true,
         permissions: {
           select: { area: true },
+        },
+        crmContact: {
+          select: { id: true, firstName: true, lastName: true }
         },
       },
     });
@@ -54,7 +61,7 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
-    const { name, email, password, role, organization, notes, isActive, permissions } = data;
+    const { name, email, password, role, organizationId, organizationRole, notes, isActive, permissions } = data;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -82,7 +89,8 @@ export async function POST(req: Request) {
         email,
         password: hashedPassword,
         role: role || 'USER',
-        organization: organization || null,
+        organizationId: organizationId || null,
+        organizationRole: organizationRole || null,
         notes: notes || null,
         isActive: isActive !== false,
       },
@@ -91,7 +99,11 @@ export async function POST(req: Request) {
         name: true,
         email: true,
         role: true,
-        organization: true,
+        organizationId: true,
+        organizationRole: true,
+        organization: {
+          select: { id: true, name: true, displayName: true }
+        },
         isActive: true,
         createdAt: true,
       },
