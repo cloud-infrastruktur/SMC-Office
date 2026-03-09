@@ -3,11 +3,17 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
-# Wir erzwingen den Standard-Pfad für Prisma
 RUN npx prisma generate
+
+# DUMMY-ENVs für den Build-Prozess (verhindert Absturz bei Auth/Prisma)
 ENV NEXT_OUTPUT_MODE=standalone
 ENV NEXT_TELEMETRY_DISABLED=1
-# Build erzwingen, Type-Checks ignorieren
+ENV NEXTAUTH_URL=http://localhost:3000
+ENV NEXTAUTH_SECRET=placeholder_for_build_only
+ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+ENV SKIP_ENV_VALIDATION=true
+
+# Build jetzt ausführen
 RUN npx next build
 
 FROM node:20-alpine AS runner
