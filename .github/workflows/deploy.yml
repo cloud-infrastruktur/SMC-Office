@@ -1,143 +1,22 @@
-# ==============================================================================
-# SMC-Office - GitHub Actions CI/CD Pipeline
-# Version: 4.8.9
-permissions:
-  contents: read
-  packages: write
-# Automatisiertes Build & Deployment auf SMCVS01
-# ==============================================================================
-# 
-# TRIGGER-ÜBERSICHT:
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. Push auf main/prod Branch     → Build + Deploy (latest + Branch-Tag)
-# 2. Git Tag push (v*.*.*)         → Build + Deploy (Version-Tag + latest)
-# 3. GitHub Release veröffentlicht → Build + Deploy (Version-Tag + latest)
-# 4. Manueller Start (Run workflow)→ Build + Deploy (wählbare Umgebung)
-# ==============================================================================
-
 name: Build & Deploy SMC-Office
 
 on:
-permissions:
-  contents: read
-  packages: write
-  # Branch-Pushes (für Development-Workflow)
   push:
     branches:
       - main
-      - prod
-    # WICHTIG: Tag-Pushes explizit triggern (z.B. git push origin v4.8.9)
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'      # Matches: v4.8.9, v5.0.0, etc.
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'    # Matches: v4.8.9-beta, v4.8.9-rc1, etc.
-  
-  # GitHub Release veröffentlicht (über UI oder API)
-  release:
-    types: [published]
-  
-  # Manueller Trigger über GitHub UI ("Run workflow" Button)
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment Environment'
-permissions:
-  contents: read
-  packages: write
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - staging
-      force_deploy:
-        description: 'Deploy auch wenn keine Änderungen erkannt'
-permissions:
-  contents: read
-  packages: write
-        required: false
-        default: false
-        type: boolean
+      - 'v*'
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  CONTAINER_NAME: smc-office-prod
-  SERVER_HOST: smcvs01.smc-office.eu
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  # ==============================================================================
-  # Job 1: Build & Push Docker Image
-  # ==============================================================================
-  build:
-    name: Build Docker Image
+  build-and-push:
     runs-on: ubuntu-latest
-permissions:
-  contents: read
-  packages: write
-    permissions:
-      contents: read
-      packages: write
-
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
-      version: ${{ steps.version.outputs.version }}
-permissions:
-  contents: read
-  packages: write
-      primary_tag: ${{ steps.version.outputs.primary_tag }}
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Vollständige Git-History für Tag-Erkennung
-
-      - name: Determine Version
-        id: version
-        run: |
-          echo "🔍 Detecting version source..."
-          echo "   github.ref: ${{ github.ref }}"
-          echo "   github.event_name: ${{ github.event_name }}"
-          
-          # Priorität 1: Git Tag (z.B. refs/tags/v4.8.9)
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION="${{ github.ref_name }}"
-            echo "📌 Version from Git Tag: $VERSION"
-          
-          # Priorität 2: Release Tag
-          elif [[ "${{ github.event_name }}" == "release" ]]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            echo "📌 Version from Release: $VERSION"
-          
-          # Priorität 3: CHANGELOG.md
-          else
-            VERSION=$(grep -m1 '## \[V' CHANGELOG.md | sed 's/.*\[V\([^]]*\)\].*/\1/' || echo "")
-            if [[ -n "$VERSION" ]]; then
-              VERSION="v$VERSION"
-              echo "📌 Version from CHANGELOG: $VERSION"
-            else
-              VERSION="dev-$(date +%Y%m%d)"
-              echo "📌 Fallback Version: $VERSION"
-permissions:
-  contents: read
-  packages: write
-            fi
-          fi
-          
-          # Sicherstellen, dass Version mit 'v' beginnt
-          if [[ ! "$VERSION" == v* ]]; then
-            VERSION="v$VERSION"
-          fi
-          
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "primary_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION" >> $GITHUB_OUTPUT
-          echo ""
-          echo "════════════════════════════════════════"
-          echo "📦 Final Version: $VERSION"
-permissions:
-  contents: read
-  packages: write
-          echo "════════════════════════════════════════"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -145,187 +24,34 @@ permissions:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker Metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # Dynamisches Tagging basierend auf Event-Typ
-          tags: |
-            # Branch-Name als Tag (z.B. main, prod)
-            type=ref,event=branch
-            # SemVer aus Git-Tags (v4.8.9 → 4.8.9, v4.8, v4)
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            # Explizite Version aus vorherigem Step
-            type=raw,value=${{ steps.version.outputs.version }}
-            # 'latest' nur bei main-Branch oder Release/Tag
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' }}
-          # Labels für Traceability
-          labels: |
-            org.opencontainers.image.title=SMC-Office
-            org.opencontainers.image.description=SMC Management Consulting Office Suite
-            org.opencontainers.image.version=${{ steps.version.outputs.version }}
-
-      - name: Build and Push Docker Image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ghcr.io/cloud-infrastruktur/smc-office:latest
+            ghcr.io/cloud-infrastruktur/smc-office:${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            APP_VERSION=${{ steps.version.outputs.version }}
 
-      - name: Verify Build Output
-        run: |
-          echo ""
-          echo "════════════════════════════════════════════════════════════"
-          echo "✅ Docker Image built and pushed successfully!"
-          echo "════════════════════════════════════════════════════════════"
-          echo ""
-          echo "📦 Published Tags:"
-          echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | sed 's/^/   • /'
-          echo ""
-          echo "🔗 Primary Image: ${{ steps.version.outputs.primary_tag }}"
-          echo "════════════════════════════════════════════════════════════"
-
-  # ==============================================================================
-  # Job 2: Deploy to Production Server (SMCVS01)
-  # ==============================================================================
   deploy:
-    name: Deploy to SMCVS01
-    needs: build
+    needs: build-and-push
     runs-on: ubuntu-latest
-permissions:
-  contents: read
-  packages: write
-    environment: production
-
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@master
         with:
-          host: ${{ env.SERVER_HOST }}
+          host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
-            echo "════════════════════════════════════════════════════════════"
-            echo "🚀 SMC-Office Deployment"
-            echo "════════════════════════════════════════════════════════════"
-            echo "📦 Version:  ${{ needs.build.outputs.version }}"
-permissions:
-  contents: read
-  packages: write
-            echo "🏷️  Image:    ${{ needs.build.outputs.primary_tag }}"
-            echo "📅 Time:     $(date '+%Y-%m-%d %H:%M:%S')"
-            echo "════════════════════════════════════════════════════════════"
-            
-            # Wechsel ins Deployment-Verzeichnis
             cd /DATA/AppData/SMC-Office-PreProd/ops/smc-office
-            
-            # Login zu GitHub Container Registry
-            echo ""
-            echo "[1/5] 🔐 Logging into GitHub Container Registry..."
-            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Neues Image pullen (mit spezifischem Version-Tag)
-            echo ""
-            echo "[2/5] 📥 Pulling image: ${{ needs.build.outputs.version }}..."
-            docker pull ${{ needs.build.outputs.primary_tag }}
-            
-            # Auch latest-Tag pullen für Fallback
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || true
-            
-            # Alten Container stoppen
-            echo ""
-            echo "[3/5] 🛑 Stopping old container..."
-            docker-compose -f docker-compose.production.yml down --remove-orphans || true
-            
-            # Image-Tag in .env für docker-compose setzen
-            echo ""
-            echo "[4/5] ⚙️  Updating deployment configuration..."
-            # Backup der alten Konfiguration
-            cp .env.deploy .env.deploy.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
-            
-            # Version aktualisieren (oder hinzufügen)
-            if grep -q "^IMAGE_TAG=" .env.deploy 2>/dev/null; then
-              sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${{ needs.build.outputs.version }}|" .env.deploy
-            else
-              echo "IMAGE_TAG=${{ needs.build.outputs.version }}" >> .env.deploy
-            fi
-            
-            echo "   IMAGE_TAG=${{ needs.build.outputs.version }}"
-            
-            # Neuen Container starten (Infisical injiziert Secrets)
-            echo ""
-            echo "[5/5] 🚀 Starting new container..."
-            docker-compose -f docker-compose.production.yml up -d
-            
-            # Health Check mit Retry
-            echo ""
-            echo "⏳ Running health check (max 30s)..."
-            for i in 1 2 3 4 5 6; do
-              sleep 5
-              if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
-                echo "   ✅ Health check passed!"
-                break
-              fi
-              if [ $i -eq 6 ]; then
-                echo "   ❌ Health check failed after 30s!"
-                docker logs ${{ env.CONTAINER_NAME }} --tail 50
-                exit 1
-              fi
-              echo "   ⏳ Attempt $i/6 - waiting..."
-            done
-            
-            echo ""
-            echo "════════════════════════════════════════════════════════════"
-            echo "✅ Deployment erfolgreich abgeschlossen!"
-            echo "════════════════════════════════════════════════════════════"
-            echo "🌐 App:     https://smc.nrw"
-            echo "📦 Version: ${{ needs.build.outputs.version }}"
-permissions:
-  contents: read
-  packages: write
-            echo "🕐 Time:    $(date '+%Y-%m-%d %H:%M:%S')"
-            echo "════════════════════════════════════════════════════════════"
-
-      - name: Cleanup Old Images
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ env.SERVER_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            # Alte ungenutzte Images entfernen
-            docker image prune -af --filter "until=168h" || true
-            echo "🧹 Old images cleaned up"
-
-  # ==============================================================================
-  # Job 3: Notify on Failure
-  # ==============================================================================
-  notify-failure:
-    name: Notify on Failure
-    needs: [build, deploy]
-    runs-on: ubuntu-latest
-permissions:
-  contents: read
-  packages: write
-    if: failure()
-
-    steps:
-      - name: Send Failure Notification
-        run: |
-          echo "❌ Deployment failed!"
-          echo "Check the workflow logs for details."
-          # Optional: Hier könnte eine E-Mail/Slack-Benachrichtigung hinzugefügt werden
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
