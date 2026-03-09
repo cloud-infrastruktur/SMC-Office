@@ -517,10 +517,10 @@ docker compose logs -f smc-office
 ### Standalone Build erstellen
 
 ```bash
-# Im Repository:
-yarn install --immutable
-yarn prisma generate
-yarn build
+# Im Repository (npm statt yarn für Stabilität):
+npm ci --legacy-peer-deps
+npx prisma generate
+npm run build
 
 # Static Assets kopieren (KRITISCH!)
 mkdir -p .next/standalone/public
@@ -533,10 +533,10 @@ cp -r .next/static/* .next/standalone/.next/static/
 
 ```bash
 # Multi-Stage Build (automatisch via Dockerfile)
-docker build -t smc-office:4.8.3 .
+docker build -t smc-office:v4.8.9 .
 
 # Prüfen ob Infisical CLI enthalten ist
-docker run --rm smc-office:4.8.3 infisical --version
+docker run --rm smc-office:v4.8.9 infisical --version
 ```
 
 ---
@@ -575,13 +575,16 @@ docker run --rm smc-office:4.8.3 ls -la node_modules/.prisma/
 ## Versions-Info
 
 **Version:** V4.8.9  
-**Datum:** 07.03.2026  
+**Datum:** 09.03.2026  
 **Build-Routes:** 44  
 **Node.js:** 20 LTS  
 **Next.js:** 14.2.x  
-**Yarn:** 4.x Berry (node-modules Linker)  
+**Package Manager:** npm (mit package-lock.json)  
 **Prisma:** 6.7.0 (NICHT upgraden!)  
-**Secret Management:** Infisical CLI  
+**Secret Management:** Infisical CLI
+
+> **Hinweis V4.8.9:** Ab dieser Version wird **npm** statt Yarn Berry verwendet.
+> Dies behebt Build-Probleme mit `yarn install --immutable` im Docker-Kontext.  
 
 ---
 

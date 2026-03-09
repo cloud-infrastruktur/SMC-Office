@@ -1,7 +1,7 @@
 # ==============================================================================
-# SMC-Office - Production Dockerfile V4.8.7
+# SMC-Office - Production Dockerfile V4.8.9
 # Infisical CLI + Prisma Migrate Deploy
-# GitHub Actions CI/CD + Bug-Fix Referenz-Kunden Zähllogik
+# GitHub Actions CI/CD + Enterprise Architecture
 # ==============================================================================
 
 # Stage 1: Dependencies
@@ -9,28 +9,23 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Yarn Berry aktivieren
-RUN corepack enable && corepack prepare yarn@4.1.0 --activate
+# Package-Dateien kopieren (npm für Stabilität)
+COPY package.json package-lock.json ./
 
-# Package-Dateien UND yarn.lock kopieren (KRITISCH für --immutable!)
-COPY package.json yarn.lock .yarnrc.yml ./
-
-# Dependencies installieren (immutable = yarn.lock muss existieren)
-RUN yarn install --immutable
+# Dependencies installieren (ci = clean install, respektiert package-lock.json)
+RUN npm ci --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-RUN corepack enable && corepack prepare yarn@4.1.0 --activate
-
 # Dependencies aus deps-Stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Prisma Client generieren (Schema-Validierung)
-RUN yarn prisma generate
+RUN npx prisma generate
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
@@ -38,7 +33,7 @@ ENV NODE_ENV=production
 ENV NEXT_OUTPUT_MODE=standalone
 
 # Next.js Standalone Build
-RUN yarn build
+RUN npm run build
 
 # Verify standalone build was successful (outputFileTracingRoot creates nextjs_space subdir)
 RUN test -f .next/standalone/nextjs_space/server.js || (echo "ERROR: Standalone build failed - server.js not found in .next/standalone/nextjs_space/!" && exit 1)

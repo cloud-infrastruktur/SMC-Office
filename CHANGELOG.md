@@ -61,10 +61,31 @@ ghcr.io/smc/smc-office:latest
 | `scripts/migrate-v489-post.sql` | Verknüpft User mit Organizations (NACH Update) |
 | `scripts/migrate-v489-enterprise.ts` | TypeScript-Alternative |
 
+### 🐛 Bug-Fix: Docker Build (yarn → npm)
+
+#### Problem
+`yarn install --immutable` schlug fehl, da `yarn.lock` ein Symlink war und nicht synchron mit `package.json`.
+
+#### Lösung
+- **Dockerfile**: Von Yarn Berry auf **npm** umgestellt (`npm ci`)
+- **package-lock.json**: Neue Lockfile für deterministische Builds
+- **Entfernt**: `.yarnrc.yml`, `yarn.lock` (Symlinks)
+
+```dockerfile
+# Vorher (fehlerhaft):
+RUN corepack enable && yarn install --immutable
+
+# Nachher (stabil):
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps
+```
+
 ### 📝 Betroffene Dateien
 - `.github/workflows/deploy.yml` (komplett überarbeitet)
+- `Dockerfile` (npm statt yarn)
 - `DEPLOYMENT.md` (CI/CD-Sektion aktualisiert)
 - `prisma/schema.prisma` (Enterprise-Modelle)
+- `package-lock.json` (neu generiert)
 
 ---
 
