@@ -1,6 +1,9 @@
 # ==============================================================================
 # SMC-Office - GitHub Actions CI/CD Pipeline
 # Version: 4.8.9
+permissions:
+  contents: read
+  packages: write
 # Automatisiertes Build & Deployment auf SMCVS01
 # ==============================================================================
 # 
@@ -15,6 +18,9 @@
 name: Build & Deploy SMC-Office
 
 on:
+permissions:
+  contents: read
+  packages: write
   # Branch-Pushes (für Development-Workflow)
   push:
     branches:
@@ -34,6 +40,9 @@ on:
     inputs:
       environment:
         description: 'Deployment Environment'
+permissions:
+  contents: read
+  packages: write
         required: true
         default: 'production'
         type: choice
@@ -42,6 +51,9 @@ on:
           - staging
       force_deploy:
         description: 'Deploy auch wenn keine Änderungen erkannt'
+permissions:
+  contents: read
+  packages: write
         required: false
         default: false
         type: boolean
@@ -59,6 +71,9 @@ jobs:
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
+permissions:
+  contents: read
+  packages: write
     permissions:
       contents: read
       packages: write
@@ -66,6 +81,9 @@ jobs:
     outputs:
       image_tag: ${{ steps.meta.outputs.tags }}
       version: ${{ steps.version.outputs.version }}
+permissions:
+  contents: read
+  packages: write
       primary_tag: ${{ steps.version.outputs.primary_tag }}
 
     steps:
@@ -100,6 +118,9 @@ jobs:
             else
               VERSION="dev-$(date +%Y%m%d)"
               echo "📌 Fallback Version: $VERSION"
+permissions:
+  contents: read
+  packages: write
             fi
           fi
           
@@ -113,6 +134,9 @@ jobs:
           echo ""
           echo "════════════════════════════════════════"
           echo "📦 Final Version: $VERSION"
+permissions:
+  contents: read
+  packages: write
           echo "════════════════════════════════════════"
 
       - name: Set up Docker Buildx
@@ -180,6 +204,9 @@ jobs:
     name: Deploy to SMCVS01
     needs: build
     runs-on: ubuntu-latest
+permissions:
+  contents: read
+  packages: write
     environment: production
 
     steps:
@@ -195,6 +222,9 @@ jobs:
             echo "🚀 SMC-Office Deployment"
             echo "════════════════════════════════════════════════════════════"
             echo "📦 Version:  ${{ needs.build.outputs.version }}"
+permissions:
+  contents: read
+  packages: write
             echo "🏷️  Image:    ${{ needs.build.outputs.primary_tag }}"
             echo "📅 Time:     $(date '+%Y-%m-%d %H:%M:%S')"
             echo "════════════════════════════════════════════════════════════"
@@ -263,6 +293,9 @@ jobs:
             echo "════════════════════════════════════════════════════════════"
             echo "🌐 App:     https://smc.nrw"
             echo "📦 Version: ${{ needs.build.outputs.version }}"
+permissions:
+  contents: read
+  packages: write
             echo "🕐 Time:    $(date '+%Y-%m-%d %H:%M:%S')"
             echo "════════════════════════════════════════════════════════════"
 
@@ -285,6 +318,9 @@ jobs:
     name: Notify on Failure
     needs: [build, deploy]
     runs-on: ubuntu-latest
+permissions:
+  contents: read
+  packages: write
     if: failure()
 
     steps:
