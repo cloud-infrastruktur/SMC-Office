@@ -2,49 +2,44 @@
 FROM node:20 AS builder
 WORKDIR /app
 
-# Kritisch: Wir sagen Prisma und Next.js, dass wir in einer Docker-Umgebung sind
-ENV PRISMA_CLI_BINARY_TARGETS="native,linux-musl-openssl-3.0.x"
-ENV SKIP_ENV_VALIDATION=true
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_OUTPUT_MODE=standalone
+# Diese Variable hilft Prisma, die richtigen Engines zu finden
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 
 COPY package.json ./
 RUN npm install --legacy-peer-deps
 
 COPY . .
 
-# Prisma-Pfad fixen: Wir erzwingen die Generierung in den Standard-Ordner
+# Jetzt generieren wir den Client explizit
 RUN npx prisma generate
 
-# Dummies für NextAuth (verhindert den "collect page data" Absturz)
+# Dummies für den Build-Prozess
+ENV NEXT_OUTPUT_MODE=standalone
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXTAUTH_URL=http://localhost:3000
 ENV NEXTAUTH_SECRET=build_placeholder
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
-# Build starten
 RUN npx next build
 
 # Stage 2: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# WICHTIG: Alpine braucht die OpenSSL-Library für Prisma
+RUN apk add --no-cache curl bash ca-certificates openssl
 
-RUN apk add --no-cache curl bash ca-certificates \
-    && curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.alpine.sh' | bash \
+RUN curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.alpine.sh' | bash \
     && apk add --no-cache infisical
 
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 
-# Kopieren der Standalone-Files (Pfadanpassung für Enterprise)
 COPY --from=builder /app/public ./public
-# WICHTIG: Hier greift deine 'outputFileTracingRoot' Logik aus der config
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Prisma Engines für Runtime
+# Prisma Dateien für den Runner
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
